@@ -78,6 +78,8 @@ const LV=[
 let save={stars:[]};try{save=JSON.parse(host.storage.get('up_v1'))||save}catch(e){}
 const put=()=>{try{host.storage.set('up_v1',JSON.stringify(save))}catch(e){}};
 let engine,S=null,dead=new Set(),booms=[],noSave=false;
+// 音效：只报名字，真正播放在 Game.ts（文件在 assets/resources/sfx/<名字>.mp3）
+const sfx=n=>{if(host.sfx)host.sfx(n)};
 
 function add(b,g){b.g=g;Composite.add(engine.world,b);return b}
 // 密度减半：植物放大 1.4 倍后面积翻倍，不减的话互相一挤一压就自己把自己压死了
@@ -163,7 +165,7 @@ function kill(b){if(b.g.gone)return;b.g.gone=1;Composite.remove(engine.world,b)}
 // [爆炸半径, 伤害]
 const BM={sugar:[86,54],chili:[86,54],mini:[60,30],guided:[110,70],melon:[138,95],fire:[70,14],frost:[110,0],drill:[100,62],tnt:[138,95],oil:[115,60]};
 function boom(s){const ty=s.g.type||s.g.m,up=S.rogue&&s.g.type?RG:null;let [R,D]=BM[ty]||BM.tnt;if(up){R*=up.rad;D*=up.dmg}
-  const k=R/138,x=s.position.x,y=s.position.y,ice=ty==='frost',hot=ty==='fire'||ty==='oil'||!!(up&&up.burn&&!ice);kill(s);
+  const k=R/138,x=s.position.x,y=s.position.y,ice=ty==='frost',hot=ty==='fire'||ty==='oil'||!!(up&&up.burn&&!ice);kill(s);sfx('boom');
   // 重甲、固定钢板、被藤蔓缠住的方块能挡住冲击波：躲在后面的植物只吃到 1/4 伤害，也不会被点着
   const sh=bodies().filter(o=>o.g.kind==='wall'||(o.g.kind==='block'&&(o.g.m==='arm'||wrapped(o.g))));
   const nd0=S.nd;
@@ -186,7 +188,7 @@ function fire(vx,vy,px=OX,py=OY){
   S.cur=add(Bodies.circle(px,py,a.r,{density:a.den,friction:.6,restitution:.25,frictionAir:0}),{kind:'shot',type,r:a.r});
   Body.setVelocity(S.cur,{x:vx,y:vy});Body.setAngularVelocity(S.cur,.12);
   if(S.rogue&&RG.twin){const an=Math.atan2(vy,vx)-.11,sp=Math.hypot(vx,vy)*.95,s2=add(Bodies.circle(px,py,a.r,{density:a.den,friction:.6,restitution:.25,frictionAir:0}),{kind:'shot',type,r:a.r});Body.setVelocity(s2,{x:Math.cos(an)*sp,y:Math.sin(an)*sp})}
-  S.state='fly';S.ft=0;S.hitT=-1;S.trail=[];return true}
+  S.state='fly';S.ft=0;S.hitT=-1;S.trail=[];sfx('launch');return true}
 function tap(tx,ty){const c=S.cur;if(S.state!=='fly'||!c||c.g.gone||c.g.used||c.g.hit)return;
   if(c.g.type==='melon'){c.g.used=1;c.g.bang=1;booms.push(c)}
   else if(c.g.type==='guided'){if(tx==null)return;const dx=tx-c.position.x,dy=ty-c.position.y,d=Math.hypot(dx,dy)||1,sp=Math.max(14,c.speed*1.15);c.g.used=1;c.g.straight=1;Body.setVelocity(c,{x:dx/d*sp,y:dy/d*sp});S.fx.push({ring:1,x:tx,y:ty,life:.35,R:22})}
@@ -203,7 +205,7 @@ function tick(){
   Engine.update(engine,DT);S.t++;if(S.settle>0)S.settle--;
   for(const s of booms.splice(0))if(!s.g.gone)boom(s);
   for(const b of dead){if(b.g.gone)continue;const g=b.g,{x,y}=b.position;kill(b);
-    if(g.kind==='target'){const c=TG[g.t].j||TG[g.t].c;if(S.gun){if(S.t-S.gun.kt>100)S.kills=0;S.gun.kt=S.t}S.kills++;S.score+=100*S.kills;
+    if(g.kind==='target'){const c=TG[g.t].j||TG[g.t].c;sfx('splat');if(S.gun){if(S.t-S.gun.kt>100)S.kills=0;S.gun.kt=S.t}S.kills++;S.score+=100*S.kills;
       S.tot++;S.comboT=1.6;if(!S.gun)S.stop=Math.min(4,S.stop+2);S.shake=Math.max(S.shake||0,.14);
       puff(x,y,'#fff',6,4);goo(x,y,c,g.r>18?30:20,9);splat(x,y,g.r*1.7,c,1);S.fx.push({ey:1,x,y,vx:(Math.random()-.5)*9,vy:-5-Math.random()*5,life:1.4,r:g.r*.24});
       if(COMBO[S.kills]||Math.random()<(S.kills>=5?.3:.15))lensFly(x,y,c,g.r>18);
@@ -265,17 +267,17 @@ function gunTick(){const g=S.gun,mx=OX+4,my=OY+2;if(S.over)return;
   else if(!g.bs&&!targets().length&&++g.bt>50){g.bs={x:WK.x0,d:0,hp:WK.hp,t:0,flash:0,roar:0,dying:0,dead:0,ct:0};say(WK.n+' 来了!',W/2,300,40,'#ff8a3a',2.2)}
   const ts=targets(),b=g.bs&&!g.bs.dying&&!g.bs.dead?g.bs:null,by=b?wkY(b):0;
   for(const o of ts){const f=o.g.fly;if(!f||o.g.gone)continue;const dx=mx-o.position.x,dy=my-30-o.position.y,d=Math.hypot(dx,dy)||1,w=Math.sin(S.t*.07+f.ph)*1.3;
-    if(d<44){const {x,y}=o.position;kill(o);g.hp--;puff(x,y,'#ff5ad0',10,4);say('防线 -1',OX+40,OY-70,24,'#ff3b2e',.8);S.shake=.3;S.flash=.06;if(g.hp<=0){finish(false);return}continue}
+    if(d<44){const {x,y}=o.position;kill(o);g.hp--;sfx('hurt');puff(x,y,'#ff5ad0',10,4);say('防线 -1',OX+40,OY-70,24,'#ff3b2e',.8);S.shake=.3;S.flash=.06;if(g.hp<=0){finish(false);return}continue}
     Body.setVelocity(o,{x:dx/d*f.sp-dy/d*w,y:dy/d*f.sp+dx/d*w})}
-  if(g.hold){const a=Math.atan2(g.hold.y-my,g.hold.x-mx);S.ang=a;if(S.t%GUN.rate===0){const c=Math.cos(a),s=Math.sin(a);g.bul.push({x:mx+c*38,y:my+s*38,vx:c*GUN.spd,vy:s*GUN.spd});g.fc++;S.fx.push({sp:1,x:mx+c*40,y:my+s*40,vx:c*4+(Math.random()-.5)*4,vy:s*4-2,life:.15,col:'#d8fbff'})}}
+  if(g.hold){const a=Math.atan2(g.hold.y-my,g.hold.x-mx);S.ang=a;if(S.t%GUN.rate===0){const c=Math.cos(a),s=Math.sin(a);g.bul.push({x:mx+c*38,y:my+s*38,vx:c*GUN.spd,vy:s*GUN.spd});g.fc++;sfx('shoot');S.fx.push({sp:1,x:mx+c*40,y:my+s*40,vx:c*4+(Math.random()-.5)*4,vy:s*4-2,life:.15,col:'#d8fbff'})}}
   for(let i=g.bul.length-1;i>=0;i--){const q=g.bul[i];q.x+=q.vx;q.y+=q.vy;let hit=q.x<-20||q.x>W+20||q.y<-20||q.y>G;
     if(!hit)for(const o of ts)if(!o.g.gone&&o.g.hp>0&&Math.hypot(q.x-o.position.x,q.y-o.position.y)<ext(o)+5){hurt(o,GUN.dmg,'hit');hit=true;break}
     // 巨兽：肚子下面发光的囊是弱点（三倍伤害），背甲和头是普通伤害
     if(!hit&&b&&b.hp>0){const crit=Math.hypot(q.x-(b.x+WK.sac[0]),q.y-(by+WK.sac[1]))<WK.sac[2]+3;
       if(crit||Math.hypot(q.x-b.x,q.y-(by-15))<80||Math.hypot(q.x-(b.x-100),q.y-(by+12))<34){hit=true;b.hp-=GUN.dmg*(crit?3:1);b.flash=.12;
         if(crit&&S.t-b.ct>35){b.ct=S.t;say('弱点!',q.x,q.y-24,22,'#fff06a',.5);goo(q.x,q.y,'#fff06a',4,5)}
-        if(b.hp<=0){b.dying=110;S.slow=1.6;S.zoom={x:Math.min(W-70,b.x),y:by};S.score+=3000;say(WK.n+' 倒下了!',W/2,300,40,'#fff06a',2.4);for(const o of ts){o.g.last='boom';dead.add(o)}}}}
-    if(hit){g.bul.splice(i,1);if(q.y<=G&&S.fx.length<300)S.fx.push({sp:1,x:q.x,y:q.y,vx:-q.vx*.2+(Math.random()-.5)*5,vy:-q.vy*.2-2,life:.2,col:'#ffd65c'})}}}
+        if(b.hp<=0){b.dying=110;sfx('bigboom');S.slow=1.6;S.zoom={x:Math.min(W-70,b.x),y:by};S.score+=3000;say(WK.n+' 倒下了!',W/2,300,40,'#fff06a',2.4);for(const o of ts){o.g.last='boom';dead.add(o)}}}}
+    if(hit){g.bul.splice(i,1);if(q.y<=G&&q.x>=0&&q.x<=W&&q.y>=0)sfx('hit');if(q.y<=G&&S.fx.length<300)S.fx.push({sp:1,x:q.x,y:q.y,vx:-q.vx*.2+(Math.random()-.5)*5,vy:-q.vy*.2-2,life:.2,col:'#ffd65c'})}}}
 
 // ---------- 机枪关 Boss：裂地巨兽 ----------
 // 四条长腿的甲壳巨兽，从屏幕右边一步一步走进来（每落一脚地面震一下），走到 x1 之后放慢，但一直在逼近炮台，走到 xEnd 就把炮台踩扁。
@@ -286,9 +288,9 @@ const wkY=b=>G-190+Math.sin(b.d/WK.stride*12.57)*4+(b.dead?55:b.dying>0?(110-b.d
 function wkFoot(b,i){const p=b.d/WK.stride+i*.5+(i>1?.25:0),n=Math.floor(p),f=p-n,L=WK.stride,hx=b.x+WK.legs[i];
   return f<.7?{x:hx-.35*L+L*f,y:G,n}:{x:hx+.35*L-.7*L*(f-.7)/.3,y:G-Math.sin((f-.7)/.3*3.14)*34,n}}
 function wkTick(){const g=S.gun,b=g.bs;if(b.flash>0)b.flash-=1/60;if(b.roar>0)b.roar-=1/60;if(b.dead||S.over)return;
-  if(b.dying>0){b.dying--;if(b.dying%7===0){const x=b.x-110+Math.random()*220,y=wkY(b)-70+Math.random()*130,c=['#ff8a3a','#fff06a','#c8ff3a','#b5481f'][(b.dying/7)&3];goo(x,y,c,22,12);splat(x,y,30,c,1);puff(x,y,'#fff',8,5);S.fx.push({ring:1,x,y,life:.35,R:70});S.shake=.5;S.flash=.08;if(b.dying%21===0)lensFly(x,y,c,1)}if(!b.dying)b.dead=1;return}
+  if(b.dying>0){b.dying--;if(b.dying%7===0){sfx('boom');const x=b.x-110+Math.random()*220,y=wkY(b)-70+Math.random()*130,c=['#ff8a3a','#fff06a','#c8ff3a','#b5481f'][(b.dying/7)&3];goo(x,y,c,22,12);splat(x,y,30,c,1);puff(x,y,'#fff',8,5);S.fx.push({ring:1,x,y,life:.35,R:70});S.shake=.5;S.flash=.08;if(b.dying%21===0)lensFly(x,y,c,1)}if(!b.dying)b.dead=1;return}
   const rage=b.hp<WK.hp*.35,inn=b.x>WK.x1,v=inn?1.3:rage?.2:.12,n0=WK.legs.map((_,i)=>wkFoot(b,i).n);b.x-=v;b.d+=v;
-  WK.legs.forEach((_,i)=>{const f=wkFoot(b,i);if(f.n!==n0[i]){puff(f.x,G-4,'#8a7a6a',6,2.5);S.shake=Math.max(S.shake||0,inn?.24:.1)}});
+  WK.legs.forEach((_,i)=>{const f=wkFoot(b,i);if(f.n!==n0[i]){if(i<2)sfx('step');puff(f.x,G-4,'#8a7a6a',6,2.5);S.shake=Math.max(S.shake||0,inn?.24:.1)}});
   if(rage&&!b.raged){b.raged=1;b.roar=1;say('狂暴!',b.x-40,wkY(b)-120,40,'#ff3b2e',1.4);S.shake=.5}
   if(b.x<=WK.xEnd){say('炮台被踩扁了!',W/2,300,36,'#ff3b2e',1.6);S.shake=.6;g.hp=0;finish(false);return}
   if(!inn&&++b.t%(rage?100:160)===0){b.roar=.8;const y=wkY(b);for(let i=0;i<(rage?4:3)&&targets().length<14;i++)mkFly(spawnT('bud',b.x-128-Math.random()*20,y+22+(i-1)*24))}}
@@ -307,11 +309,11 @@ function bossSet(){const B=S.boss,n=bossAlive();B.cores.forEach((c,i)=>c.g.shut=
 function bossTurn(){const B=S.boss;if(B.dying||B.dead)return;B.turn++;bossSet();B.roar=.9;const hard=bossAlive()<=1,n=targets().filter(b=>b.g.t==='bud').length;
   for(let i=0;i<(hard?4:2)+B.tier-1&&n+i<9+B.tier;i++){const s=spawnT(B.tier>2&&i===0?'pot':'bud',270,690-i*42);s.g.safe=S.t+90;Body.setVelocity(s,{x:-1-Math.random()*1.5,y:-2.5})}}   // safe：刚吐出来的落地不会摔死
 function bossTick(){const B=S.boss;B.tx+=(B.gx-B.tx)*.08;B.ty+=(B.gy-B.ty)*.08;if(B.swat>0)B.swat--;
-  if(!B.dying&&!B.dead&&!bossAlive()){B.dying=110;S.slow=1.6;S.zoom={x:400,y:600};say(BTIER[B.tier].n+' 崩解!',W/2,300,40,'#fff06a',2.4);for(const b of targets()){b.g.last='boom';dead.add(b)}}
-  if(B.dying>0){B.dying--;if(B.dying%7===0){const x=340+Math.random()*180,y=500+Math.random()*250,c=['#ff5ad0','#5af0e6','#fff06a','#7a52d6'][(B.dying/7)&3];goo(x,y,c,22,12);splat(x,y,30,c,1);puff(x,y,'#fff',8,5);S.fx.push({ring:1,x,y,life:.35,R:70});S.shake=.5;S.flash=.08;if(B.dying%21===0)lensFly(x,y,c,1)}if(!B.dying)B.dead=1;return}
+  if(!B.dying&&!B.dead&&!bossAlive()){B.dying=110;sfx('bigboom');S.slow=1.6;S.zoom={x:400,y:600};say(BTIER[B.tier].n+' 崩解!',W/2,300,40,'#fff06a',2.4);for(const b of targets()){b.g.last='boom';dead.add(b)}}
+  if(B.dying>0){B.dying--;if(B.dying%7===0){sfx('boom');const x=340+Math.random()*180,y=500+Math.random()*250,c=['#ff5ad0','#5af0e6','#fff06a','#7a52d6'][(B.dying/7)&3];goo(x,y,c,22,12);splat(x,y,30,c,1);puff(x,y,'#fff',8,5);S.fx.push({ring:1,x,y,life:.35,R:70});S.shake=.5;S.flash=.08;if(B.dying%21===0)lensFly(x,y,c,1)}if(!B.dying)B.dead=1;return}
   if(B.dead)return;
   for(const s of bodies())if(s.g.kind==='shot'&&!s.g.hit&&!s.g.gone&&Math.hypot(s.position.x-B.tx,s.position.y-B.ty)<B.sr){const {x,y}=s.position;kill(s);B.swat=14;puff(x,y,'#ff5ad0',10,4);chips(x,y,'#f4efe4',6);say('拍飞!',x,y-24,28,'#ff7ad8',.9);S.shake=.2}}
-function finish(win){S.over=true;S.win=win;const gn=S.gun,left=gn?Math.max(0,gn.hp):S.ammo.length,st=win?(gn?(left>=8?3:left>=4?2:1):(left>=2?3:left===1?2:1)):0;S.stars=st;if(win)S.score+=left*500;
+function finish(win){S.over=true;S.win=win;if(!noSave)sfx(win?'win':'lose');const gn=S.gun,left=gn?Math.max(0,gn.hp):S.ammo.length,st=win?(gn?(left>=8?3:left>=4?2:1):(left>=2?3:left===1?2:1)):0;S.stars=st;if(win)S.score+=left*500;
   // 肉鸽：漏掉几株就扣几点防线耐久，然后进入三选一；耐久归零本局结束
   if(S.rogue){const n=targets().length;RG.hp-=n;if(!n)RG.hp+=3;RG.score+=S.score;if(noSave)return;if(RG.hp<=0){save.rg=Math.max(save.rg||0,RG.stage);put();UI={mode:'rgover',t:0}}else UI={mode:'pick',t:0,left:n,cards:rgOffer()};return}
   if(win&&!noSave){save.stars[S.lv]=Math.max(save.stars[S.lv]||0,st);put()}
@@ -751,12 +753,12 @@ function drawUI(){C=ctx;C.setTransform(SCL,0,0,SCL,0,0);BTN=[];
       last?btn(W/2+10,cy+160,160,52,'关卡','#c22a2a',menu,LITE):btn(W/2+10,cy+160,160,52,'下一关','#c22a2a',()=>load(S.lv+1),LITE)}
     else{label(S.gun?'防线失守':'导弹打光了',W/2,cy,44,'#e0602a',8);label(S.gun?'炮台被冲垮了，按住别松手，再来一次':'还有 '+UI.n+' 株植物没消灭，换个打法试试',W/2,cy+56,17,LITE);
       btn(W/2-170,cy+100,160,52,'关卡','#77787f',menu,LITE);btn(W/2+10,cy+100,160,52,'重来','#c22a2a',()=>load(S.lv),LITE)}}}
-function uiTap(x,y){for(let i=BTN.length-1;i>=0;i--){const b=BTN[i];if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){b.fn&&b.fn();return true}}return UI.mode!=='play'}
+function uiTap(x,y){for(let i=BTN.length-1;i>=0;i--){const b=BTN[i];if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){if(b.fn){sfx('click');b.fn()}return true}}return UI.mode!=='play'}
 function draw(){drawWorld();drawUI()}
 let acc=0;
 function step(dt){if(UI.mode==='menu'||UI.mode==='home'||UI.mode==='about')return;if(S&&S.stop>0){S.stop--;return}let k=1;if(S&&S.slow>0){S.slow-=dt;k=.25}acc+=Math.min(.05,dt)*k;while(acc>=1/60){tick();acc-=1/60}}
 load(0);home();
-return {step,draw,down,move,up,cancel,setHomeBg(img){homeBg=img},
+return {step,draw,down,move,up,cancel,inBattle:()=>UI.mode==='play'&&!!S&&!S.over,setHomeBg(img){homeBg=img},
   // 调试/自动测试用
   debug:{get S(){return S},get RG(){return RG},rgStart,rgPick,rgOffer,UPG,finish,get UI(){return UI},load,fire,tap,tick,down,LV,TG,targets,bodies,set noSave(v){noSave=v},OX,OY,VK,PMAX}};
 }

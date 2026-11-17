@@ -1,6 +1,6 @@
 import {
     _decorator, Component, Node, director, Director, Sprite, SpriteFrame, Texture2D,
-    ImageAsset, UITransform, input, Input, EventTouch, sys, view, resources,
+    ImageAsset, UITransform, input, Input, EventTouch, sys, view, resources, AudioClip, AudioSource,
 } from 'cc';
 import { EDITOR } from 'cc/env';
 import { createGame } from './GameCore';
@@ -12,6 +12,10 @@ const W = 540;
 const H = 960;
 /** 离屏画布的清晰度倍数：2 最清晰；低端机卡顿时可以改成 1.5 或 1 */
 const SCALE = 2;
+/** 背景音乐的音量（0~1） */
+const MUSIC_VOL = 0.35;
+/** 各个音效的音量（0~1），没写的是 1 */
+const VOL: Record<string, number> = { shoot: 0.3, hit: 0.5, splat: 0.6, click: 0.6, launch: 0.7 };
 
 /**
  * 把 GameCore 画出来的离屏画布显示成一张全屏贴图，并把触摸事件转发给它。
@@ -22,6 +26,10 @@ export class Game extends Component {
     private game: any = null;
     private canvasEl: HTMLCanvasElement = null!;
     private tex: Texture2D = null!;
+    private clips: Record<string, AudioClip> = {};
+    private lastPlay: Record<string, number> = {};
+    private audio: AudioSource = null!;
+    private music: AudioSource | null = null;
 
     start() {
         const cv = document.createElement('canvas');
@@ -32,12 +40,28 @@ export class Game extends Component {
         this.game = createGame({
             canvas: cv,
             scale: SCALE,
+            // 音效：同一个声音 60 毫秒内只响一次，免得一帧里几十只虫子同时死把喇叭炸了
+            sfx: (n: string) => {
+                const c = this.clips[n], now = performance.now();
+                if (!c || now - (this.lastPlay[n] || 0) < 60) return;
+                this.lastPlay[n] = now;
+                this.audio.playOneShot(c, VOL[n] ?? 1);
+            },
             storage: {
                 get: (k: string) => sys.localStorage.getItem(k),
                 set: (k: string, v: string) => sys.localStorage.setItem(k, v),
             },
         });
         this.game.draw();
+        // 音效：assets/resources/sfx/ 下的文件，文件名就是 GameCore 里 sfx('名字') 的名字
+        this.audio = this.node.addComponent(AudioSource);
+        resources.loadDir('sfx', AudioClip, (err, list) => { if (!err) for (const c of list) this.clips[c.name] = c; });
+        // 背景音乐：assets/resources/music/battle.mp3，只在战斗中循环播放（见 update）
+        resources.load('music/battle', AudioClip, (err, clip) => {
+            if (err) return;
+            const m = this.music = this.node.addComponent(AudioSource);
+            m.clip = clip; m.loop = true; m.volume = MUSIC_VOL;
+        });
         // 首页背景图：assets/resources/title-screen-background.png
         resources.load('title-screen-background', ImageAsset, (err, img) => { if (!err) this.game.setHomeBg(img.data); });
 
@@ -70,6 +94,9 @@ export class Game extends Component {
 
     update(dt: number) {
         this.game.step(dt);
+        // 背景音乐只在战斗中响：首页、选关、结算、三选一界面都停掉，下一场战斗从头放
+        const m = this.music;
+        if (m) { const on = this.game.inBattle(); if (on && !m.playing) m.play(); else if (!on && m.playing) m.stop(); }
         this.game.draw();
         this.tex.uploadData(this.canvasEl);
     }

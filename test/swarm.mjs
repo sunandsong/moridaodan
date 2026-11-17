@@ -4,12 +4,16 @@ import assert from 'node:assert';
 const noop = new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => 0 : noop), apply: () => noop, set: () => true });
 globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: () => noop }) };
 const { createGame } = await import('../assets/scripts/GameCore.ts');
-const mk = () => createGame({ canvas: document.createElement('canvas'), scale: 1, storage: { get: () => null, set() {} } }).debug;
+const heard = new Set(); let booms = 0;
+const mk = () => createGame({ canvas: document.createElement('canvas'), scale: 1, sfx: n => { heard.add(n); if (n === 'boom') booms++; }, storage: { get: () => null, set() {} } }).debug;
 
 // 首页：启动后停在首页，背景里的第一关不会自己开打
 { const g = createGame({ canvas: document.createElement('canvas'), scale: 1, storage: { get: () => null, set() {} } });
   for (let i = 0; i < 60 * 20; i++) g.step(1 / 60);
-  assert.equal(g.debug.UI.mode, 'home'); assert.equal(g.debug.S.t, 0); }
+  assert.equal(g.debug.UI.mode, 'home'); assert.equal(g.debug.S.t, 0);
+  // 背景音乐只在战斗中放：首页不放，进关卡放，结算界面不放
+  assert.equal(g.inBattle(), false); g.debug.load(0); assert.equal(g.inBattle(), true);
+  g.debug.finish(true); assert.equal(g.debug.UI.mode, 'result'); assert.equal(g.inBattle(), false); }
 
 // 自动瞄准最近的目标并一直按住
 let T = mk(); T.noSave = true; T.load(0);
@@ -25,12 +29,19 @@ for (; n < 60 * 240 && !T.S.over; n++) {
 assert.ok(bossAt > 0, 'Boss 没有登场');
 assert.ok(T.S.over && T.S.win, '按住连发应该能过关');
 console.log(`过关：Boss 第 ${(bossAt / 60).toFixed(1)} 秒登场，全程 ${(n / 60).toFixed(1)} 秒，防线剩 ${T.S.gun.hp}，${T.S.stars} 星，击杀 ${T.S.tot}`);
+assert.ok(booms >= 10, 'Boss 倒下时每一下爆炸都该有声音，实际只响了 ' + booms + ' 次');
+for (const n of ['shoot', 'hit', 'splat', 'step', 'bigboom']) assert.ok(heard.has(n), '该响的音效没响：' + n);
 
 // 不开火：虫群撞垮防线
 T = mk(); T.noSave = true; T.load(0);
 for (n = 0; n < 60 * 120 && !T.S.over; n++) T.tick();
 assert.ok(T.S.over && !T.S.win && !T.S.gun.bs, '不开火应该失守');
 console.log(`不开火：第 ${(n / 60).toFixed(1)} 秒失守`);
+assert.ok(heard.has('hurt'), '虫子撞到炮台应该有音效');
+// 每个用到的音效名都得有对应的文件
+const { existsSync, readFileSync } = await import('node:fs');
+for (const m of readFileSync(new URL('../assets/scripts/GameCore.ts', import.meta.url), 'utf8').matchAll(/sfx\((?:win\?)?'(\w+)'(?::'(\w+)')?\)/g))
+  for (const n of [m[1], m[2]]) if (n) assert.ok(existsSync(new URL(`../assets/resources/sfx/${n}.mp3`, import.meta.url)), '缺音效文件：' + n);
 
 // 别的关卡不受影响
 T.load(1); assert.ok(!T.S.gun && T.S.ammo.length === 3 && T.targets().length > 0);
