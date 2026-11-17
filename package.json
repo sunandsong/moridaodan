@@ -1,0 +1,10 @@
+{
+  "name": "moridaodan",
+  "uuid": "e916cf59-2f69-42e2-b956-4464d881afc1",
+  "creator": {
+    "version": "3.8.8"
+  },
+  "dependencies": {
+    "matter-js": "^0.19.0"
+  }
+}

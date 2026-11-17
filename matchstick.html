@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>火柴算式</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:#f3e6d0;
+  background:radial-gradient(ellipse 90% 60% at 50% 42%,#3b2a1e,#1d1511 70%,#120d0a)}
+body.lit{background:radial-gradient(ellipse 90% 60% at 50% 42%,#6a3f1c,#2a1a10 70%,#120d0a)}
+body{transition:background .6s}
+#app{max-width:560px;height:100%;margin:0 auto;display:flex;flex-direction:column;padding:14px 14px 18px}
+header{display:flex;align-items:center;justify-content:space-between}
+#lv{font-size:20px;font-weight:800;letter-spacing:1px}
+#mv{font-size:14px;padding:6px 12px;border-radius:20px;background:rgba(0,0,0,.35);color:#e8c98a}
+#mv b{font-size:16px;color:#fff}
+#ask{text-align:center;font-size:17px;margin-top:9vh;color:#e8d5b0}
+#ask b{color:#ff6a4d;font-size:22px;margin:0 3px}
+#mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0}
+#stage{position:relative;width:100%}
+#read{height:30px;margin-top:26px;font-size:20px;letter-spacing:3px;font-weight:700;font-variant-numeric:tabular-nums;transition:color .2s}
+#read.bad{color:#d98b7c}#read.ok{color:#8fe3a0}#read.unk{color:#8a7a66;font-size:14px;letter-spacing:0;font-weight:400}
+.m,.s{position:absolute;left:0;top:0;width:var(--len);height:var(--t);margin:calc(var(--t)/-2) 0 0 calc(var(--len)/-2)}
+.m{cursor:pointer;touch-action:none;transition:transform .28s cubic-bezier(.3,1.35,.5,1),filter .2s;filter:drop-shadow(0 3px 2px rgba(0,0,0,.55));z-index:2}
+.m::before,.s::before{content:'';position:absolute;inset:-11px -2px}
+.m i{position:absolute;inset:16% 0 16% 8%;border-radius:2px 3px 3px 2px;background:linear-gradient(#f6e0ab,#d9b06c 55%,#a87a3c)}
+.m b{position:absolute;left:0;top:-6%;height:112%;width:21%;border-radius:50%;background:radial-gradient(circle at 38% 30%,#ff9079,#d7302a 55%,#86130f)}
+.m.lock{cursor:default}
+.m.sel{filter:drop-shadow(0 0 7px #ffd27a) drop-shadow(0 8px 5px rgba(0,0,0,.5));z-index:5}
+.m.drag{transition:none}
+.m.hint{animation:pulse .7s ease-in-out infinite}
+@keyframes pulse{50%{filter:drop-shadow(0 0 10px #7dffb0) drop-shadow(0 0 3px #7dffb0)}}
+.s{border:1.5px dashed rgba(255,230,180,.45);border-radius:6px;opacity:0;pointer-events:none;transition:opacity .15s;z-index:1;cursor:pointer}
+.pick .s.free{opacity:1;pointer-events:auto}
+.s.hint{opacity:1!important;border:2px solid #7dffb0;box-shadow:0 0 10px #7dffb0}
+.win .m{cursor:default}
+.win .m b::after{content:'';position:absolute;left:50%;top:50%;width:calc(var(--t)*3.4);height:calc(var(--t)*3.4);margin:calc(var(--t)*-1.7) 0 0 calc(var(--t)*-1.7);
+  transform:rotate(calc(var(--r)*-1));
+  background:radial-gradient(ellipse 30% 46% at 50% 30%,#fffbd6,#ffc53d 40%,#ff6a1f 72%,rgba(255,90,20,0) 100%);animation:fl .22s ease-in-out infinite alternate;animation-delay:var(--d)}
+@keyframes fl{from{opacity:.85;scale:.9 1}to{opacity:1;scale:1.08 1.12}}
+.shake{animation:sh .3s}
+@keyframes sh{25%{translate:-6px 0}75%{translate:6px 0}}
+footer{display:flex;gap:10px;height:54px}
+button{font-family:inherit;border:0;cursor:pointer;color:#f3e6d0;font-weight:700;font-size:16px;border-radius:14px}
+footer button{flex:1;background:rgba(255,235,200,.1);border:1.5px solid rgba(255,235,200,.18)}
+footer button:active{background:rgba(255,235,200,.2)}
+#next{display:none;flex:1;background:linear-gradient(#ff8a4d,#e0452a);color:#fff;font-size:18px;box-shadow:0 4px 0 #8a2412}
+.won #next{display:block}.won footer button:not(#next){display:none}
+#toast{position:fixed;left:50%;top:22%;transform:translateX(-50%);background:rgba(0,0,0,.8);padding:9px 18px;border-radius:22px;font-size:15px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;z-index:9}
+#ov{position:fixed;inset:0;background:rgba(18,13,10,.94);display:none;flex-direction:column;align-items:center;padding:22px 16px;z-index:8;overflow:auto}
+#ov.on{display:flex}
+#ov h2{font-size:20px;margin-bottom:4px}
+#ov h3{font-size:13px;font-weight:400;color:#b8a385;margin:16px 0 8px;align-self:flex-start;max-width:520px;width:100%;margin-inline:auto}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;width:100%;max-width:520px}
+.grid button{aspect-ratio:1;background:rgba(255,235,200,.1);border:1.5px solid rgba(255,235,200,.18);font-size:16px}
+.grid button.done{background:#7a3a1c;border-color:#ff8a4d;color:#ffd9a8}
+.grid button.cur{border-color:#fff}
+.grid button:disabled{opacity:.3;cursor:default}
+#close{margin-top:20px;padding:12px 40px;background:rgba(255,235,200,.14)}
+</style>
+</head>
+<body>
+<div id="app">
+  <header><div id="lv"></div><div id="mv"></div></header>
+  <div id="ask"></div>
+  <div id="mid"><div id="stage"></div><div id="read"></div></div>
+  <footer><button id="reset">重置</button><button id="hint">提示</button><button id="menu">关卡</button><button id="next">下一关</button></footer>
+</div>
+<div id="toast"></div>
+<div id="ov"></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+/* ---------- 七段火柴数字 ---------- */
+// 位顺序: 0上 1右上 2右下 3下 4左下 5左上 6中
+const DIG=[63,6,91,79,102,109,125,7,127,111],REV={};DIG.forEach((m,i)=>REV[m]=i);
+const mk=lens=>{const types=[];for(let i=0;i<lens[0];i++)types.push('D');types.push('O');for(let i=0;i<lens[1];i++)types.push('D');types.push('E');for(let i=0;i<lens[2];i++)types.push('D');return{types,lens}};
+const enc=(L,a,op,b,c)=>{const s=String(a)+op+String(b)+'='+String(c);return[...s].map(ch=>ch==='+'?3:ch==='-'?1:ch==='='?3:DIG[+ch])};
+function read(L,m){
+  let s='',bad=false;
+  L.types.forEach((t,i)=>{if(t==='E')s+='=';else if(t==='O'){const c=m[i]===3?'+':m[i]===1?'-':'?';s+=c;if(c==='?')bad=true}else{const d=REV[m[i]];if(d===undefined){s+='?';bad=true}else s+=d}});
+  if(bad)return{str:s,ok:false};
+  const[la,lb]=L.lens,A=s.slice(0,la),op=s[la],B=s.slice(la+1,la+1+lb),C=s.slice(la+lb+2);
+  if([A,B,C].some(x=>x.length>1&&x[0]==='0'))return{str:s,ok:false};
+  return{str:s,ok:true,val:(op==='+'?+A+ +B:+A- +B)===+C};
+}
+// 遍历所有"恰好移动 n 根"能到达的局面
+function each(L,m,n,fn){
+  const on=[],off=[];L.types.forEach((t,ci)=>{if(t==='E')return;const nb=t==='D'?7:2;for(let b=0;b<nb;b++)((m[ci]>>b&1)?on:off).push([ci,b])});
+  const comb=(arr,k)=>{const r=[];const f=(s,cur)=>{if(cur.length===k){r.push(cur.slice());return}for(let i=s;i<arr.length;i++){cur.push(arr[i]);f(i+1,cur);cur.pop()}};f(0,[]);return r};
+  const R=comb(on,n),A=comb(off,n);
+  for(const r of R)for(const a of A){const x=m.slice();for(const[ci,b]of r)x[ci]&=~(1<<b);for(const[ci,b]of a)x[ci]|=1<<b;fn(x)}
+}
+/* ---------- 出题 ---------- */
+function rngOf(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gen(lensPool,n,rng,seen){
+  for(let tries=0;tries<600;tries++){
+    const lens=lensPool[rng()*lensPool.length|0],rnd=len=>len===1?rng()*10|0:10+(rng()*90|0);
+    const a=rnd(lens[0]),b=rnd(lens[1]),op=rng()<.5?'+':'-',c=op==='+'?a+b:a-b;
+    if(c<0||String(c).length!==lens[2])continue;
+    const L=mk(lens),T=enc(L,a,op,b,c),cand=[];
+    each(L,T,n,x=>{const r=read(L,x);if(r.ok&&!r.val)cand.push(x)});
+    for(let k=0;k<12&&cand.length;k++){
+      const S=cand.splice(rng()*cand.length|0,1)[0],key=read(L,S).str;
+      if(seen.has(key))continue;
+      if(n>1){let easy=false;each(L,S,1,x=>{const r=read(L,x);if(r.ok&&r.val)easy=true});if(easy)continue}
+      seen.add(key);return{L,n,start:S,sol:T};
+    }
+  }
+  return null;
+}
+const TIERS=[
+  {name:'入门 · 移动 1 根 · 个位数',n:1,lens:[[1,1,1]]},
+  {name:'进阶 · 移动 1 根 · 两位数',n:1,lens:[[1,1,2],[2,1,1],[2,1,2]]},
+  {name:'高手 · 移动 2 根 · 个位数',n:2,lens:[[1,1,1]]},
+  {name:'大师 · 移动 2 根 · 两位数',n:2,lens:[[1,1,2],[2,1,1],[2,1,2]]}
+],PER=12,LEVELS=[];
+{const rng=rngOf(20261116),seen=new Set();for(const t of TIERS)for(let i=0;i<PER;i++)LEVELS.push(gen(t.lens,t.n,rng,seen))}
+
+/* ---------- 状态 ---------- */
+let save={done:[]};try{save=JSON.parse(localStorage.getItem('matchmath_v1'))||save}catch(e){}
+const persist=()=>{try{localStorage.setItem('matchmath_v1',JSON.stringify(save))}catch(e){}};
+const unlocked=()=>Math.min(LEVELS.length-1,save.done.length?Math.max(...save.done)+1:0);
+let cur=unlocked(),P,slots=[],ms=[],sel=null,won=false,hintStep=0,G={};
+const stage=$('stage');
+const key=(ci,b)=>ci*8+b;
+
+function geom(){
+  const n=P.L.types.length,w=stage.clientWidth,L=Math.min(72,(w-8)/(n*1.17+(n-1)*.4)),t=Math.max(7,L*.17),W=L+t,gap=L*.4,H=2*L+t;
+  const total=n*W+(n-1)*gap,x0=(w-total)/2;
+  stage.style.height=H+'px';stage.style.setProperty('--len',L*.92+'px');stage.style.setProperty('--t',t+'px');
+  G={L,t,W,gap,H,x0};
+}
+function pos(ci,b){
+  const{L,t,W,gap,x0}=G,p=t/2,x=x0+ci*(W+gap),ty=P.L.types[ci];
+  if(ty==='D')return[[W/2,p,0],[W-p,p+L/2,90],[W-p,p+1.5*L,90],[W/2,p+2*L,0],[p,p+1.5*L,90],[p,p+L/2,90],[W/2,p+L,0]][b].map((v,i)=>i?v:v+x);
+  if(ty==='O')return[x+W/2,p+L,b?90:0];
+  return[x+W/2,p+L+(b?.24:-.24)*L,0];
+}
+function put(m,x,y,r){m.el.style.transform=`translate(${x}px,${y}px) rotate(${r+m.j}deg)`;m.el.style.setProperty('--r',(r+m.j)+'deg')}
+function layout(){geom();for(const s of slots){const[x,y,r]=pos(s.ci,s.b);s.el.style.transform=`translate(${x}px,${y}px) rotate(${r}deg)`}for(const m of ms)put(m,...pos(m.ci,m.b))}
+function load(i){
+  cur=i;P=LEVELS[i];won=false;sel=null;hintStep=0;stage.innerHTML='';slots=[];ms=[];
+  stage.className='';document.body.classList.remove('lit');$('app').classList.remove('won');
+  P.L.types.forEach((t,ci)=>{const nb=t==='D'?7:2;for(let b=0;b<nb;b++){
+    if(t!=='E'){const el=document.createElement('div');el.className='s';stage.appendChild(el);const s={ci,b,el};el.onclick=()=>{if(sel)place(sel,s)};slots.push(s)}
+    if(P.start[ci]>>b&1){const el=document.createElement('div');el.className='m'+(t==='E'?' lock':'');el.innerHTML='<i></i><b></b>';el.style.setProperty('--d',-Math.random()*.3+'s');stage.appendChild(el);
+      const m={el,ci,b,j:(Math.random()-.5)*3,lock:t==='E'};ms.push(m);if(!m.lock)bind(m)}
+  }});
+  $('lv').textContent=`第 ${i+1} 关`;$('ask').innerHTML=`移动<b>${P.n}</b>根火柴，让等式成立`;
+  layout();update();
+}
+const occ=()=>{const o=new Map();for(const m of ms)o.set(key(m.ci,m.b),m);return o};
+const masks=()=>{const a=P.L.types.map(()=>0);for(const m of ms)a[m.ci]|=1<<m.b;return a};
+function used(mm){let u=0;P.L.types.forEach((t,ci)=>{if(t!=='E')for(let b=0;b<7;b++)if((P.start[ci]>>b&1)&&!(mm[ci]>>b&1))u++});return u}
+function update(){
+  const o=occ();for(const s of slots)s.el.classList.toggle('free',!o.has(key(s.ci,s.b)));
+  stage.classList.toggle('pick',!!sel&&!won);for(const m of ms)m.el.classList.toggle('sel',m===sel);
+  const mm=masks(),r=read(P.L,mm),u=used(mm),el=$('read');
+  $('mv').innerHTML=`已移动 <b>${u}</b> / ${P.n}`;
+  if(!r.ok&&r.str.includes('?')){el.className='unk';el.textContent='这个摆法还不是一个算式'}
+  else{el.className=r.ok&&r.val?'ok':'bad';el.textContent=[...r.str].join(' ').replace('=',r.ok&&r.val?'=':'≠')}
+  if(r.ok&&r.val&&u===P.n&&!won)win();
+}
+function place(m,s){
+  const from=[m.ci,m.b];m.ci=s.ci;m.b=s.b;
+  if(used(masks())>P.n){m.ci=from[0];m.b=from[1];put(m,...pos(m.ci,m.b));sel=null;update();toast(`只能移动 ${P.n} 根，先把别的放回去`);stage.classList.remove('shake');void stage.offsetWidth;stage.classList.add('shake');return}
+  clearHint();put(m,...pos(m.ci,m.b));sel=null;update();
+}
+function bind(m){
+  let d=null;
+  m.el.addEventListener('pointerdown',ev=>{if(won)return;ev.preventDefault();d={x:ev.clientX,y:ev.clientY,drag:false,was:sel===m};sel=m;update();try{m.el.setPointerCapture(ev.pointerId)}catch(e){}});
+  m.el.addEventListener('pointermove',ev=>{if(!d)return;if(!d.drag&&Math.hypot(ev.clientX-d.x,ev.clientY-d.y)>8){d.drag=true;m.el.classList.add('drag')}
+    if(d.drag){const b=stage.getBoundingClientRect();put(m,ev.clientX-b.left,ev.clientY-b.top-G.t*2,pos(m.ci,m.b)[2])}});
+  const up=ev=>{if(!d)return;const dd=d;d=null;m.el.classList.remove('drag');
+    if(!dd.drag){if(dd.was){sel=null;update()}return}
+    const b=stage.getBoundingClientRect(),x=ev.clientX-b.left,y=ev.clientY-b.top-G.t*2,o=occ();let best=null,bd=G.L*.8;
+    for(const s of slots){if(o.has(key(s.ci,s.b)))continue;const p=pos(s.ci,s.b),q=Math.hypot(p[0]-x,p[1]-y);if(q<bd){bd=q;best=s}}
+    if(best)place(m,best);else{put(m,...pos(m.ci,m.b));sel=null;update()}};
+  m.el.addEventListener('pointerup',up);m.el.addEventListener('pointercancel',up);
+}
+function win(){won=true;sel=null;stage.classList.remove('pick');stage.classList.add('win');document.body.classList.add('lit');$('app').classList.add('won');
+  if(!save.done.includes(cur)){save.done.push(cur);persist()}
+  $('next').textContent=cur<LEVELS.length-1?'下一关':'全部通关 · 再看看关卡';for(const m of ms)m.el.classList.remove('sel')}
+/* ---------- 提示 ---------- */
+function clearHint(){for(const m of ms)m.el.classList.remove('hint');for(const s of slots)s.el.classList.remove('hint')}
+function hint(){
+  if(won)return;const mm=masks();
+  if(used(mm)>0&&hintStep===0){load(cur);toast('已重置，看发绿光的那根')}
+  clearHint();hintStep=Math.min(2,hintStep+1);
+  const rem=[],add=[];P.L.types.forEach((t,ci)=>{if(t==='E')return;for(let b=0;b<7;b++){const a=P.start[ci]>>b&1,z=P.sol[ci]>>b&1;if(a&&!z)rem.push(key(ci,b));if(!a&&z)add.push(key(ci,b))}});
+  for(const m of ms)if(rem.includes(key(m.ci,m.b)))m.el.classList.add('hint');
+  if(hintStep>1)for(const s of slots)if(add.includes(key(s.ci,s.b)))s.el.classList.add('hint');
+}
+/* ---------- 界面 ---------- */
+let tt;function toast(s){const e=$('toast');e.textContent=s;e.style.opacity=1;clearTimeout(tt);tt=setTimeout(()=>e.style.opacity=0,1600)}
+function menu(){
+  const ov=$('ov'),un=unlocked();ov.innerHTML='<h2>选择关卡</h2>';
+  TIERS.forEach((t,ti)=>{const h=document.createElement('h3');h.textContent=t.name;ov.appendChild(h);const g=document.createElement('div');g.className='grid';
+    for(let i=0;i<PER;i++){const n=ti*PER+i,b=document.createElement('button');b.textContent=n+1;if(save.done.includes(n))b.classList.add('done');if(n===cur)b.classList.add('cur');
+      b.disabled=n>un&&i>0;b.onclick=()=>{ov.classList.remove('on');load(n)};g.appendChild(b)}ov.appendChild(g)});
+  const c=document.createElement('button');c.id='close';c.textContent='返回';c.onclick=()=>ov.classList.remove('on');ov.appendChild(c);ov.classList.add('on');
+}
+$('reset').onclick=()=>load(cur);$('hint').onclick=hint;$('menu').onclick=menu;
+$('next').onclick=()=>cur<LEVELS.length-1?load(cur+1):menu();
+stage.addEventListener('pointerdown',ev=>{if(ev.target===stage&&sel){sel=null;update()}});
+window.addEventListener('resize',layout);
+load(cur);
+window.MM={LEVELS,read,each,load,get P(){return P}};
+})();
+</script>
+</body>
+</html>
