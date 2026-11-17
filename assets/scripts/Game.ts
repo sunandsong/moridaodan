@@ -64,6 +64,8 @@ export class Game extends Component {
         });
         // 首页背景图：assets/resources/title-screen-background.png
         resources.load('title-screen-background', ImageAsset, (err, img) => { if (!err) this.game.setHomeBg(img.data); });
+        // 首页 Logo：assets/resources/title-logo.png
+        resources.load('title-logo', ImageAsset, (err, img) => { if (!err) this.game.setHomeLogo(img.data); });
 
         const tex = new Texture2D();
         tex.image = new ImageAsset(cv);
