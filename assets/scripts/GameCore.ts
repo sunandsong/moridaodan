@@ -13,7 +13,7 @@ const MAT={bis:{hp:55,den:.001,c:'#d59a55',d:'#7a4a1e',burn:.22},ice:{hp:22,den:
   arm:{hp:180,den:.003,c:'#3c4656',d:'#232a36'},oil:{hp:12,den:.001,c:'#e0602a',d:'#5a1d0c',burn:.4},wt:{hp:1e9,den:.012,c:'#4a4f5a',d:'#17110f'}};
 // 植物：vine 会回血，maw 会吞导弹，spore 每回合长出一株 bud，root 是寄生藤的根（不算目标）
 const TG={pot:{hp:16,r:28,c:'#7a52d6',d:'#35e0d0'},cooker:{hp:42,r:35,c:'#241a3e',d:'#ff5ad0',j:'#ff5ad0'},
-  vine:{hp:70,r:28,c:'#2fd0b0',d:'#b8fff0',regen:.35},maw:{hp:30,r:31,c:'#2a4fd0',d:'#35e0d0'},spore:{hp:24,r:27,c:'#ff7a4a',d:'#fff06a'},bud:{hp:8,r:18,c:'#3fd6c8',d:'#1f7a8a'},root:{hp:22,r:20,c:'#d0408a',d:'#7a1f5a'},
+  vine:{hp:70,r:28,c:'#2fd0b0',d:'#b8fff0',regen:.35},maw:{hp:30,r:31,c:'#2a4fd0',d:'#35e0d0'},spore:{hp:24,r:27,c:'#ff7a4a',d:'#fff06a'},bud:{hp:8,r:18,c:'#3fd6c8',d:'#1f7a8a'},core:{hp:60,r:24,c:'#fff06a',d:'#ff9a3a'},root:{hp:22,r:20,c:'#d0408a',d:'#7a1f5a'},
   // 不是圆的：sh 是碰撞形状（rect 用 w/h，tri 是正三角），r 只用来算特效大小，hh 是中心到底边的距离；j 是爆出来的汁液颜色（不写就用 c）
   // 这四种的画法是按 1/SK 的尺寸写的，画的时候整体放大 SK 倍
   cactus:{hp:26,r:41,hh:40.5,w:36,h:81,sh:'rect',c:'#d04a9a',d:'#6a1f5a'},shroom:{hp:20,r:32,hh:28,w:64,h:56,sh:'rect',c:'#b06ae0',d:'#5a2a8a'},
@@ -37,7 +37,8 @@ function kit(){const out=[];
   // 一排东西并肩摆开（植物类型名，或 'tnt' / 'oil'），以 x 为中心
   const wd=t=>t==='tnt'||t==='oil'?26:TG[t].sh==='tri'?TG[t].r*1.74:TG[t].w||TG[t].r*2;
   const row=(ts,x,bot)=>{let cx=x-ts.reduce((a,t)=>a+wd(t)+2,-2)/2;for(const t of ts){const w=wd(t);t==='tnt'?B(t,cx+w/2,bot,26,26):t==='oil'?B(t,cx+w/2,bot,24,32):T(t,cx+w/2,bot);cx+=w+2}};
-  return {out,B,T,S,house,root,Wt,Wl,P,Gt,pile,row,C}}
+  const boss=(tier=1)=>out.push({k:'boss',tier});
+  return {out,B,T,S,house,root,Wt,Wl,P,Gt,pile,row,C,boss}}
 // 前 10 关是"无脑爽"：大个头挤成一堆，旁边摆着炸药，打中炸药就连锁全灭；pop=植物死了会爆浆炸伤旁边的
 const EZ={pop:1,ammo:['sugar','sugar','sugar']};
 const LV=[
@@ -50,6 +51,7 @@ const LV=[
  {name:'独木桥',...EZ,f:k=>{k.S(375,720,310);const t=k.house(300,720,'bis','pot');k.house(450,720,'bis','pot');k.B('tnt',375,720,26,26);k.B('tnt',375,694,26,26);k.T('pod',375,t);k.row(['bud','tnt','bud'],375,t-34)}},
  {name:'连环爆',...EZ,f:k=>{k.S(385,710,300);const t=k.house(300,710,'bis','cactus');k.house(470,710,'ice','shroom');k.B('tnt',385,710,26,26);k.B('tnt',300,t,26,26);k.T('bud',470,t);k.S(385,545,120);k.row(['bud','oil','bud'],385,545)}},
  {name:'满堂彩',...EZ,f:k=>{const t=k.pile(405,G,7,4);k.B('tnt',405,t,26,26);k.S(300,700,210);k.C(208,700);k.C(392,700);k.B('tnt',392,636,26,26);const q=k.pile(300,700,4,3);k.B('tnt',300,q,26,26);k.S(340,530,160);k.row(['pot','oil','pot'],340,530)}},
+ {name:'虚空之母',boss:1,pop:1,ammo:['sugar','chili','sugar','guided','melon','sugar','drill','guided'],f:k=>{k.boss(1);k.pile(300,G,3,2)}},
  {name:'大扫除',...EZ,f:k=>{const t=k.pile(392,G,7,4);k.B('tnt',392,t,26,26);k.S(260,640,170);const a=k.house(260,640,'bis','cooker',70);k.B('tnt',330,640,26,26);k.row(['bud','tnt','bud'],260,a);k.S(390,520,150);k.row(['cactus','tnt','cactus'],390,520)}},
  {name:'新兵训练',ammo:['sugar','sugar','sugar'],f:k=>{k.S(380,640,130);k.house(380,640,'bis','pot')}},
  {name:'双子哨所',ammo:['sugar','sugar','sugar','sugar'],f:k=>{k.S(400,690,120);k.house(400,690,'bis','pot');k.S(210,470,120);k.house(210,470,'ice','cactus')}},
@@ -59,6 +61,7 @@ const LV=[
  {name:'钢筋碉堡',ammo:['guided','melon','sugar','sugar'],f:k=>{k.S(370,560,170);const t=k.house(360,560,'cho','cooker',70);k.T('pot',360,t);k.B('tnt',436,560,26,26)}},
  {name:'瞭望高塔',ammo:['sugar','guided','melon','sugar'],f:k=>{k.S(380,720,170);let t=k.house(370,720,'bis','cooker',70);t=k.house(370,t,'bis','shroom',70);k.house(370,t,'ice','thorn',70);k.B('tnt',446,720,26,26)}},
  {name:'总攻',ammo:['guided','chili','melon','sugar','sugar'],f:k=>{k.S(425,730,150);k.house(425,730,'cho','shroom',70);k.S(275,540,170);const t=k.house(265,540,'bis','cooker',70);k.house(265,t,'bis','pot',70);k.B('tnt',342,540,26,26);k.S(420,330,130);k.house(420,330,'ice','pot')}},
+ {name:'猩红之母',boss:2,pop:1,ammo:['sugar','frost','sugar','guided','melon','fire','drill','chili','sugar'],f:k=>{k.boss(2);k.pile(300,G,3,2)}},
  {name:'野火',ammo:['fire','sugar','sugar'],f:k=>{k.S(380,640,150);k.house(380,640,'bis','vine');k.S(210,450,110);k.house(210,450,'ice','cactus')}},
  {name:'血盆大口',ammo:['sugar','chili','guided','sugar'],f:k=>{k.S(390,600,130);k.T('maw',390,600);k.S(230,420,120);k.house(230,420,'ice','pot')}},
  {name:'孢子雨',ammo:['sugar','sugar','sugar','melon','sugar'],f:k=>{k.S(385,650,210);k.T('spore',385,650);k.S(215,440,120);k.T('cactus',182,440);k.T('cactus',248,440);k.T('pod',215,359);k.T('thorn',215,325)}},
@@ -67,6 +70,8 @@ const LV=[
  {name:'速冻',ammo:['frost','sugar','frost','sugar'],f:k=>{k.S(400,680,140);k.house(400,680,'arm','cooker',70);k.S(240,470,140);k.house(240,470,'arm','pot',70)}},
  {name:'千斤坠',ammo:['sugar','sugar','guided'],f:k=>{k.Wl(400,300,130,14);k.Wt(400,307,70);k.S(400,640,150);k.B('arm',360,640,14,64);k.B('arm',440,640,14,64);k.T('vine',400,640);k.S(215,500,150);k.house(200,500,'bis','cooker',70);k.B('oil',273,500,24,32)}},
  {name:'机关城',ammo:['sugar','guided','sugar','sugar'],f:k=>{k.S(420,700,150);k.Wl(420,622,150,14);k.Wl(488,665,14,70);k.T('pot',430,700);k.Gt(336,664,14,72,74,260);k.S(232,430,120);k.T('pot',232,430);k.Wl(172,388,14,84);k.Wl(226,349,122,14);k.P(352,385,90,1.45)}},
+ {name:'决战前夜',ammo:['frost','sugar','fire','drill','guided','sugar'],f:k=>{k.S(400,700,170);k.house(400,700,'arm','vine',70);k.S(230,480,170);k.house(230,480,'bis','cooker',70);k.B('oil',300,480,24,32);k.S(420,400,120);k.T('maw',420,400)}},
+ {name:'深渊之母',boss:3,pop:1,ammo:['melon','frost','sugar','guided','melon','fire','drill','chili','sugar','guided'],f:k=>{k.boss(3);k.pile(300,G,3,2)}},
 ];
 
 let save={stars:[]};try{save=JSON.parse(host.storage.get('up_v1'))||save}catch(e){}
@@ -83,13 +88,14 @@ function build(f,ammo,i=-1){
   Events.on(engine,'collisionStart',onCol);
   add(Bodies.rectangle(W/2,G+60,4000,120,{isStatic:true,friction:1}),{kind:'ground'});
   add(Bodies.rectangle(W+40,H/2-400,60,H+800,{isStatic:true,friction:.2}),{kind:'ground'});   // 屏幕右边一堵看不见的墙，东西不会滚出画面
-  const k=kit();f(k);let seed=1;const ropes=[],roots=[];
+  const k=kit();f(k);let seed=1,hasBoss=0;const ropes=[],roots=[];
   const blk=(m,x,y,w,h)=>add(Bodies.rectangle(x,y,w,h,{density:MAT[m].den,friction:.8,restitution:.02}),{kind:'block',m,hp:MAT[m].hp,max:MAT[m].hp,w,h,seed:seed++});
   for(const o of k.out){
     if(o.k==='b')blk(o.m,o.x,o.y,o.w,o.h);
     else if(o.k==='t')spawnT(o.t,o.x,o.y);
     else if(o.k==='r'){const d=TG.root;roots.push(add(Bodies.circle(o.x,o.y,d.r,{density:.002,friction:.9,restitution:0}),{kind:'root',t:'root',hp:d.hp,max:d.hp,r:d.r}))}
     else if(o.k==='w'){const b=blk('wt',o.x,o.ay+o.len+20,40,40),c=Constraint.create({pointA:{x:o.x,y:o.ay},bodyB:b,pointB:{x:0,y:-20},stiffness:.9,length:o.len});Composite.add(engine.world,c);ropes.push({c,b})}
+    else if(o.k==='boss')hasBoss=o.tier;
     else if(o.k==='c')add(Bodies.rectangle(o.x,o.y,o.w,o.h,{isStatic:true,friction:1}),{kind:'curb',w:o.w,h:o.h});
     else if(o.k==='wall')add(Bodies.rectangle(o.x,o.y,o.w,o.h,{isStatic:true,friction:1}),{kind:'wall',w:o.w,h:o.h});
     else if(o.k==='p')add(Bodies.rectangle(o.x,o.y,o.w,12,{isStatic:true,angle:o.an,friction:0,restitution:1}),{kind:'bounce',w:o.w,h:12});
@@ -98,9 +104,9 @@ function build(f,ammo,i=-1){
   }
   // 寄生藤：根附近的方块被藤蔓缠住，变硬、挡冲击波、点不着，直到根被消灭
   for(const r of roots)for(const b of Composite.allBodies(engine.world))if(b.g.kind==='block'&&Math.hypot(b.position.x-r.position.x,b.position.y-r.position.y)<270)b.g.vine=r;
-  S={lv:i,ammo:ammo.slice(),sel:0,nd:0,fly:[],lens:[],drips:[],pops:[],tot:0,stop:0,comboT:0,state:'aim',settle:50,cur:null,ft:0,hitT:-1,fx:[],trail:[],last:[],drag:null,winT:0,wt:0,calm:0,over:false,t:0,
+  S={lv:i,boss:null,ammo:ammo.slice(),sel:0,nd:0,fly:[],lens:[],drips:[],pops:[],tot:0,stop:0,comboT:0,state:'aim',settle:50,cur:null,ft:0,hitT:-1,fx:[],trail:[],last:[],drag:null,winT:0,wt:0,calm:0,over:false,t:0,
     ropes,stains:[],score:0,kills:0,slow:0,zoom:null,zk:0,flash:0};
-  dead.clear();booms=[];UI={mode:'play'};sg.clearRect(0,0,W,H);
+  dead.clear();booms=[];UI={mode:'play'};sg.clearRect(0,0,W,H);if(hasBoss)mkBoss(hasBoss);
   // 开局先悄悄把物理跑 3 秒，让堆起来的东西自己落稳（这段时间碰撞不算伤害），免得玩家还没开炮炸药就被压爆
   for(let n=0;n<180;n++)Engine.update(engine,DT);
 }
@@ -129,11 +135,11 @@ function onCol(ev){
     if(imp<THR)continue;const d=(imp-THR)*KD,why=o=>o.g.kind==='shot'?'hit':o.isStatic?'fall':'crush';hurt(a,d,why(b));hurt(b,d,why(a));
   }
 }
-function hurt(b,d,why){const g=b.g;if((g.kind!=='block'&&g.kind!=='target'&&g.kind!=='root')||g.m==='wt')return;
+function hurt(b,d,why){const g=b.g;if((g.kind!=='block'&&g.kind!=='target'&&g.kind!=='root')||g.m==='wt'||g.shut||(g.safe>S.t&&why!=='boom'))return;if(g.t==='core'&&d>1)S.boss.flash=.25;
   if(g.frozen>0)d*=4;else if(wrapped(g))d*=.2;
   g.hp-=d;g.flash=.18;g.last=why;g.hitT=S.t;if(g.hp<=0){if(g.kind==='target'&&why==='boom'&&!dead.has(b))S.nd++;dead.add(b)}}
-function ignite(b){const g=b.g;if(g.gone||g.burn||wrapped(g))return;if(g.kind==='target'||g.kind==='root'||(g.kind==='block'&&MAT[g.m].burn)){g.frozen=0;g.burn=1}}
-function freeze(b){const g=b.g;if(g.gone||g.m==='wt')return;if(g.kind==='target'||g.kind==='root'||g.kind==='block'){g.burn=0;g.frozen=720}}
+function ignite(b){const g=b.g;if(g.gone||g.burn||wrapped(g)||g.shut)return;if(g.kind==='target'||g.kind==='root'||(g.kind==='block'&&MAT[g.m].burn)){g.frozen=0;g.burn=1}}
+function freeze(b){const g=b.g;if(g.gone||g.m==='wt'||g.shut)return;if(g.kind==='target'||g.kind==='root'||g.kind==='block'){g.burn=0;g.frozen=720}}
 function puff(x,y,col,n,sp){for(let i=0;i<n;i++){const a=Math.random()*6.28,v=sp*(.3+Math.random());S.fx.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-1,life:.5+Math.random()*.4,col,r:2+Math.random()*4})}}
 function chips(x,y,col,n){for(let i=0;i<n;i++){const a=Math.random()*6.28,v=2+Math.random()*4;S.fx.push({sq:1,x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-2.5,life:.5+Math.random()*.4,col,r:2+Math.random()*2.5})}}
 // 爆浆：汁液飞溅出去，落到哪儿就在背景上留下一摊（画在一张单独的图层上，整关都不消失）
@@ -200,6 +206,7 @@ function tick(){
       S.tot++;S.comboT=1.6;S.stop=Math.min(4,S.stop+2);S.shake=Math.max(S.shake||0,.14);
       puff(x,y,'#fff',6,4);goo(x,y,c,g.r>18?30:20,9);splat(x,y,g.r*1.7,c,1);S.fx.push({ey:1,x,y,vx:(Math.random()-.5)*9,vy:-5-Math.random()*5,life:1.4,r:g.r*.24});
       if(COMBO[S.kills]||Math.random()<(S.kills>=5?.3:.15))lensFly(x,y,c,g.r>18);
+      if(g.t==='core'){say('弱点击破!',x,y-60,40,'#fff06a',1.4);S.flash=.14;S.shake=.5;S.slow=Math.max(S.slow,.5);S.zoom={x,y};goo(x,y,c,30,12);lensFly(x,y,c,1);lensFly(x,y,'#ff5ad0',1);S.score+=1000}
       if(S.kills<3)say(g.frozen>0?'碎了!':WHY[g.last]||'消灭!',x,y-20,26,undefined,.9);
       if(COMBO[S.kills])say(COMBO[S.kills],x+(Math.random()-.5)*70,y-52-Math.random()*30,S.kills>7?46:38,'#ff3b2e',1.3);
       // 肉鸽强化：尸爆（稍等几帧再炸，形成一路连锁）、嗜血装填
@@ -225,7 +232,7 @@ function tick(){
     if(g.kind==='shot'&&g.hit&&++g.hit>220){puff(p.x,p.y,'#fff',6,2);kill(b)}
     if(g.flash>0)g.flash-=1/60;
     if(g.frozen>0)g.frozen--;
-    if(g.burn){burning=true;g.burn++;g.hp-=g.kind==='block'?MAT[g.m].burn:g.max/90;g.last='fire';const e=ext(b);
+    if(g.burn){burning=true;g.burn++;g.hp-=g.kind==='block'?MAT[g.m].burn:g.t==='core'?g.max/500:g.max/90;g.last='fire';if(g.t==='core'&&g.burn>200)g.burn=0;const e=ext(b);
       if(g.burn%3===0&&S.fx.length<340)S.fx.push({fl:1,x:p.x+(Math.random()-.5)*e*1.6,y:p.y+(Math.random()-.5)*e*1.2,vx:(Math.random()-.5)*.6,vy:-1.1-Math.random(),life:.35+Math.random()*.3,r:3+Math.random()*4});
       if(g.burn%15===0)for(const o of bodies())if(o!==b&&!o.g.burn&&near(b,o,7))ignite(o);
       if(g.hp<=0)dead.add(b)}
@@ -237,11 +244,31 @@ function tick(){
   }
   for(const r of S.ropes)if(!r.cut){const a=r.c.pointA,q=att(r);for(const s of bodies())if(s.g.kind==='shot'&&!s.g.gone&&segDist(s.position.x,s.position.y,a.x,a.y,q.x,q.y)<s.g.r+2){cut(r);break}}
   if(S.state==='fly'){S.ft++;const c=S.cur;if(!c.g.gone&&!c.g.hit&&S.ft%3===0)S.trail.push([c.position.x,c.position.y]);
-    if(c.g.gone||(S.hitT>=0&&S.ft-S.hitT>60)||S.ft>420){S.state=S.ammo.length?'aim':'wait';S.wt=0;S.calm=0;S.last=S.trail;if(S.ammo.length)sprout()}}
+    if(c.g.gone||(S.hitT>=0&&S.ft-S.hitT>60)||S.ft>420){S.state=S.ammo.length?'aim':'wait';S.wt=0;S.calm=0;S.last=S.trail;if(S.ammo.length){sprout();if(S.boss)bossTurn()}}}
+  if(S.boss)bossTick();
   if(!S.over){
-    if(!targets().length){if(++S.winT>45)finish(true)}
+    if(!targets().length&&!(S.boss&&S.boss.dying>0)){if(++S.winT>45)finish(true)}
     else if(S.state==='wait'){if(!burning)S.wt++;let mx=0;for(const b of bodies())if(!b.isStatic)mx=Math.max(mx,b.speed);S.calm=mx<.25&&!burning?S.calm+1:0;if(S.calm>50||S.wt>500)finish(false)}}
 }
+
+// ---------- Boss：虚空之母 ----------
+// 一株占了半个屏幕的巨型母体，本体打不动，身上挂着三个发光的弱点囊，全部打爆才算赢。
+// 玩家每打完一发，它行动一次：换一个弱点囊合上盖子（合上的打不动）、触手换一条路守着（靠近的导弹会被拍飞）、再吐几株孢囊出来。
+// 三个等级是同一只 Boss 的加强版：换名字和颜色，弱点囊更硬，吐得更多，触手范围更大
+const BTIER=[null,{n:'虚空之母',c:'#3a1f5a',d:'#4a2a7a'},{n:'猩红之母',c:'#5a1a34',d:'#7a2a4a'},{n:'深渊之母',c:'#123a52',d:'#1f5a7a'}];
+const BOSS={x:445,y:610,R:110,anc:[{x:327,y:542},{x:415,y:477},{x:317,y:655}],hi:[345,415],lo:[262,690]};
+function mkBoss(tier){add(Bodies.circle(BOSS.x,BOSS.y,BOSS.R,{isStatic:true,friction:1}),{kind:'boss'});add(Bodies.rectangle(BOSS.x,BOSS.y+190,120,170,{isStatic:true,friction:1}),{kind:'boss'});
+  const hp=TG.core.hp+20*(tier-1),cores=BOSS.anc.map((a,i)=>{const c=spawnT('core',a.x,a.y);c.g.ci=i;c.g.hp=c.g.max=hp;Composite.add(engine.world,Constraint.create({pointA:{x:a.x,y:a.y},bodyB:c,stiffness:.6,length:0}));return c});
+  S.boss={tier,hp,turn:0,cores,tx:BOSS.hi[0],ty:BOSS.hi[1],gx:0,gy:0,sr:52,dying:0,dead:0,flash:0,roar:0,swat:0};bossSet()}
+const bossAlive=()=>S.boss.cores.filter(c=>!c.g.gone).length;
+function bossSet(){const B=S.boss,n=bossAlive();B.cores.forEach((c,i)=>c.g.shut=n>1&&i===B.turn%3);[B.gx,B.gy]=B.turn%2?BOSS.lo:BOSS.hi;B.sr=(n<=1?64:52)+(B.tier-1)*7}
+function bossTurn(){const B=S.boss;if(B.dying||B.dead)return;B.turn++;bossSet();B.roar=.9;const hard=bossAlive()<=1,n=targets().filter(b=>b.g.t==='bud').length;
+  for(let i=0;i<(hard?4:2)+B.tier-1&&n+i<9+B.tier;i++){const s=spawnT(B.tier>2&&i===0?'pot':'bud',270,690-i*42);s.g.safe=S.t+90;Body.setVelocity(s,{x:-1-Math.random()*1.5,y:-2.5})}}   // safe：刚吐出来的落地不会摔死
+function bossTick(){const B=S.boss;B.tx+=(B.gx-B.tx)*.08;B.ty+=(B.gy-B.ty)*.08;if(B.swat>0)B.swat--;
+  if(!B.dying&&!B.dead&&!bossAlive()){B.dying=110;S.slow=1.6;S.zoom={x:400,y:600};say(BTIER[B.tier].n+' 崩解!',W/2,300,40,'#fff06a',2.4);for(const b of targets()){b.g.last='boom';dead.add(b)}}
+  if(B.dying>0){B.dying--;if(B.dying%7===0){const x=340+Math.random()*180,y=500+Math.random()*250,c=['#ff5ad0','#5af0e6','#fff06a','#7a52d6'][(B.dying/7)&3];goo(x,y,c,22,12);splat(x,y,30,c,1);puff(x,y,'#fff',8,5);S.fx.push({ring:1,x,y,life:.35,R:70});S.shake=.5;S.flash=.08;if(B.dying%21===0)lensFly(x,y,c,1)}if(!B.dying)B.dead=1;return}
+  if(B.dead)return;
+  for(const s of bodies())if(s.g.kind==='shot'&&!s.g.hit&&!s.g.gone&&Math.hypot(s.position.x-B.tx,s.position.y-B.ty)<B.sr){const {x,y}=s.position;kill(s);B.swat=14;puff(x,y,'#ff5ad0',10,4);chips(x,y,'#f4efe4',6);say('拍飞!',x,y-24,28,'#ff7ad8',.9);S.shake=.2}}
 function finish(win){S.over=true;S.win=win;const left=S.ammo.length,st=win?(left>=2?3:left===1?2:1):0;S.stars=st;if(win)S.score+=left*500;
   // 肉鸽：漏掉几株就扣几点防线耐久，然后进入三选一；耐久归零本局结束
   if(S.rogue){const n=targets().length;RG.hp-=n;if(!n)RG.hp+=3;RG.score+=S.score;if(noSave)return;if(RG.hp<=0){save.rg=Math.max(save.rg||0,RG.stage);put();UI={mode:'rgover',t:0}}else UI={mode:'pick',t:0,left:n,cards:rgOffer()};return}
@@ -263,7 +290,7 @@ const UPG=[
 ];
 function rgRnd(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;return ()=>((s=s*16807%2147483647)-1)/2147483646}
 // 一波的布局：地面一片花苞 + 2~3 个平台（围栏里堆满花苞，或者叠起来的岗楼），越往后越多、越硬
-function genStage(n,R){return k=>{
+function genStage(n,R){if(n%10===0)return k=>{k.boss(Math.min(3,n/10));k.pile(300,G,3,2)};return k=>{
   const pick=()=>{const r=R();return n>=6&&r<.05?'maw':n>=4&&r<.12?'vine':n>=3&&r<.22?'cooker':n>=2&&r<.3?'spore':r<.48?'pot':r<.63?'cactus':r<.77?'shroom':r<.89?'thorn':'bud'};
   const mat=()=>{const r=R();return n>=7&&r<.15?'arm':n>=4&&r<.3?'cho':r<.6?'bis':'ice'};
   const br=TG.bud.r,pile=k.pile;
@@ -380,6 +407,33 @@ function drawShot(type,x,y,an,r,fl){const [c0,c1,sd]=SC[type],L=r*1.5,w=r*.66;C.
 function stat(g,r,sd){if(g.burn){C.globalAlpha=Math.min(.6,g.burn/60);wcirc(0,0,r,sd);C.fillStyle='#17110f';C.fill();C.globalAlpha=1}
   if(g.frozen>0){C.globalAlpha=.6;wcirc(0,0,r+2,sd);C.fillStyle='#cfefff';C.fill();C.globalAlpha=1;wcirc(0,0,r+2,sd);C.strokeStyle='#fff';C.lineWidth=2;C.stroke()}
   if(g.flash>0){C.globalAlpha=Math.min(1,g.flash*3);wcirc(0,0,r,sd);C.fillStyle='#fff';C.fill();C.globalAlpha=1}}
+// ---------- Boss 的画法 ----------
+function drawBoss(T){const B=S.boss,bx=BOSS.x,by=BOSS.y,R=BOSS.R,sh=B.dying>0?(Math.random()-.5)*9:0,hurt=B.flash>0||B.dying>0||B.dead;if(B.flash>0)B.flash-=1/60;
+  C.save();C.translate(sh,sh*.6);C.lineCap=C.lineJoin='round';
+  for(let i=0;i<6;i++){const x0=bx-70+i*28,w=Math.sin(T*1.5+i)*10;C.beginPath();C.moveTo(x0,by+60);C.bezierCurveTo(x0-20+w,by+150,x0+30-w,by+210,x0-30+i*6,G+2);C.strokeStyle=INK;C.lineWidth=24-i;C.stroke();C.strokeStyle=i%2?BTIER[B.tier].d:BTIER[B.tier].c;C.lineWidth=17-i;C.stroke()}
+  for(let i=0;i<9;i++){const a=-2.9+i*.42+Math.sin(T+i)*.05,L=R*(i%2?1.45:1.72),pc=(da,d)=>[bx+Math.cos(a+da)*d,by+Math.sin(a+da)*d];blob([pc(-.2,R*.8),pc(-.14,L*.8),pc(0,L),pc(.14,L*.8),pc(.2,R*.8)]);ink(B.dead?'#5a4a6a':i%2?'#ff5ad0':'#5af0e6',2.4);if(!B.dead)dot(bx+Math.cos(a)*L*.86,by+Math.sin(a)*L*.86,4,'#fff06a')}
+  wcirc(bx,by,R,201,2.5);ink(B.dead?'#2a2030':B.flash>0?'#8a5a9a':BTIER[B.tier].c,3.4);
+  for(const [x,y,r] of [[-60,52,16],[42,72,22],[62,-52,14],[-22,88,10],[82,10,12]])dot(bx+x,by+y,r,'rgba(255,90,208,.22)');
+  for(const c of B.cores)if(!c.g.gone){const a=BOSS.anc[c.g.ci];C.beginPath();C.moveTo(bx-10,by);C.quadraticCurveTo((bx+a.x)/2+10,(by+a.y)/2-14,a.x,a.y);C.strokeStyle=`rgba(255,240,106,${c.g.shut?.15:.4+.25*Math.sin(T*6)})`;C.lineWidth=5;C.stroke()}
+  const ex=bx-18,ey=by-22,er=46,tg=S.cur&&!S.cur.g.gone&&S.state==='fly'?S.cur.position:{x:OX,y:OY},an=Math.atan2(tg.y-ey,tg.x-ex),ix=Math.cos(an)*14,iy=Math.sin(an)*12;
+  dot(ex,ey,er+3,INK);dot(ex,ey,er,hurt?'#e6b0b8':'#f4efe4');
+  if(hurt){C.beginPath();C.moveTo(ex-er*.78,ey-10);C.quadraticCurveTo(ex,ey+18,ex+er*.78,ey-10);C.strokeStyle=INK;C.lineWidth=7;C.stroke();C.strokeStyle='#b3261e';C.lineWidth=2;C.beginPath();C.moveTo(ex-10,ey+16);C.lineTo(ex-13,ey+44);C.stroke()}
+  else{C.strokeStyle='#b3261e';C.lineWidth=1.4;for(let i=0;i<8;i++){const a=i*.785+.3;C.beginPath();C.moveTo(ex+Math.cos(a)*er*.95,ey+Math.sin(a)*er*.95);C.lineTo(ex+Math.cos(a+.3)*er*.6,ey+Math.sin(a+.3)*er*.6);C.stroke()}
+    dot(ex+ix,ey+iy,er*.62,'#1fae8a');dot(ex+ix,ey+iy,er*.46,'#5af0e6');dot(ex+ix,ey+iy,er*.3,'#c8ff3a');C.beginPath();C.ellipse(ex+ix,ey+iy,er*.08,er*.36,0,0,7);C.fillStyle='#0d0507';C.fill();dot(ex+ix-9,ey+iy-12,5,'#fff');
+    C.beginPath();C.arc(ex,ey,er+1,Math.PI*1.1,Math.PI*1.9);C.closePath();C.fillStyle='#24103c';C.fill();C.strokeStyle=INK;C.lineWidth=3;C.stroke()}
+  const mo=B.dead?.15:B.roar>0||B.dying>0?1:.32+.1*Math.sin(T*2);if(B.roar>0)B.roar-=1/60;
+  const mx=bx-30,my=by+46,mw=56,s0=5,s1=12+34*mo,mp=(u,s)=>[mx+mw*(2*u-1),my+s*4*u*(1-u)],tk=.5+mo*.7;
+  C.beginPath();C.moveTo(mx-mw,my);C.quadraticCurveTo(mx,my+s1*2,mx+mw,my);C.quadraticCurveTo(mx,my+s0*2,mx-mw,my);C.closePath();C.fillStyle='#16040a';C.fill();C.strokeStyle=INK;C.lineWidth=5.5;C.stroke();C.strokeStyle='#ff5ad0';C.lineWidth=2.4;C.stroke();
+  C.fillStyle='#d8fbff';C.strokeStyle=INK;C.lineWidth=1.2;
+  for(let i=0;i<7;i++){const u=.1+i*.133,a=mp(u-.05,s0),b=mp(u+.05,s0);C.beginPath();C.moveTo(a[0],a[1]);C.lineTo((a[0]+b[0])/2,(a[1]+b[1])/2+(i%2?8:13)*tk);C.lineTo(b[0],b[1]);C.closePath();C.fill();C.stroke()}
+  for(let i=0;i<5;i++){const u=.2+i*.15,a=mp(u-.045,s1),b=mp(u+.045,s1);C.beginPath();C.moveTo(a[0],a[1]);C.lineTo((a[0]+b[0])/2,(a[1]+b[1])/2-9*tk);C.lineTo(b[0],b[1]);C.closePath();C.fill();C.stroke()}
+  C.restore()}
+// 触手：从身体伸到它这回合守着的位置，末端一个拍子，虚线圈是会被拍飞的范围
+function drawTent(T){const B=S.boss;if(B.dying>0||B.dead)return;const x0=352,y0=625,k=B.swat>0?Math.sin(B.swat/14*3.14)*26:0,x1=B.tx+Math.sin(T*3)*6-k,y1=B.ty+Math.cos(T*2.3)*6,cx=(x0+x1)/2-52,cy=(y0+y1)/2+(y1<y0?-34:44);
+  C.lineCap='round';for(const [lw,c] of [[27,INK],[20,BTIER[B.tier].d]]){C.beginPath();C.moveTo(x0,y0);C.quadraticCurveTo(cx,cy,x1,y1);C.strokeStyle=c;C.lineWidth=lw;C.stroke()}
+  for(let i=1;i<6;i++){const u=i/6.5,v=1-u;dot(v*v*x0+2*u*v*cx+u*u*x1,v*v*y0+2*u*v*cy+u*u*y1+5,3.6,'#ff8ad0')}
+  wcirc(x1,y1,23,205,1.5);ink('#ff5ad0',2.8);dot(x1,y1,10,INK);dot(x1,y1,8.5,'#fff06a');
+  C.setLineDash([6,9]);C.beginPath();C.arc(B.tx,B.ty,B.sr,0,7);C.strokeStyle='rgba(255,122,216,.6)';C.lineWidth=2.2;C.stroke();C.setLineDash([])}
 // 植物贴图缓存：一波有几十株，逐笔重画太慢，所以每种植物按"抖动帧 × 是否受伤"各画一次存成小图。
 // 着火、冰冻、受击闪白时，以及吞噬花、再生藤（它们的样子取决于实时状态），仍然逐笔画。
 const SPR={},SPR_OK={pot:1,bud:1,cooker:1,spore:1,cactus:1,shroom:1,pod:1,thorn:1};
@@ -429,6 +483,11 @@ function drawBody(b){const g=b.g,p=b.position;C.save();C.translate(p.x,p.y);C.ro
     wcirc(0,0,r,91,1);ink(TG.root.c);dot(0,r*.25,r*.42*(.8+.2*Math.sin(tt*4)),'rgba(255,240,106,.7)');
     for(const k of [-1,1]){dot(k*r*.4,-r*.25,r*.2,'#0d0507');dot(k*r*.4,-r*.25,r*.09,'#f2d23a')}
     stat(g,r,91)}
+  else if(g.kind==='target'&&g.t==='core'){const r=g.r,tt=performance.now()/1000,pu=g.frozen>0?1:1+.07*Math.sin(tt*5+p.y);C.rotate(-b.angle);
+    if(g.shut){wcirc(0,0,r*.95,77,1);ink('#4a2a7a');C.lineCap='round';C.beginPath();C.moveTo(-r*.72,-2);C.quadraticCurveTo(0,r*.4,r*.72,-2);C.strokeStyle=INK;C.lineWidth=3.4;C.stroke();for(let i=0;i<5;i++){const x=-r*.5+i*r*.25;C.beginPath();C.moveTo(x,r*.08+(2-Math.abs(i-2))*2.4);C.lineTo(x,r*.3+(2-Math.abs(i-2))*2.4);C.stroke()}}
+    else{dot(0,0,r*1.55*pu,'rgba(255,240,106,.2)');wcirc(0,0,r*pu,77,1.2);ink(TG.core.c,3);dot(0,0,r*.66*pu,'#ff9a3a');dot(0,0,r*.42*pu,'#ff3b6a');C.beginPath();C.ellipse(0,0,r*.09,r*.32,0,0,7);C.fillStyle='#0d0507';C.fill();dot(-r*.42,-r*.44,r*.14,'#fff');
+      C.beginPath();C.arc(0,0,r+7,-1.571,-1.571+6.283*Math.max(0,g.hp/g.max));C.strokeStyle='#ff3b2e';C.lineWidth=3.4;C.lineCap='round';C.stroke()}
+    stat(g,r,77)}
   else if(g.kind==='target'&&C===ctx&&SPR_OK[g.t]&&!g.burn&&!(g.frozen>0)&&!(g.flash>0)){const hs=g.r*2+8,hurt=g.hp<g.max*.55,key=g.t+BO+(hurt?'h':'');C.drawImage(SPR[key]||(SPR[key]=mkSpr(g,hs,hurt)),-hs,-hs,hs*2,hs*2)}
   else if(g.kind==='target'&&TG[g.t].sh){const t=TG[g.t],hurtF=g.hp<g.max*.55,tw=g.frozen>0?0:BO-1,sd=g.r*5+1;C.lineCap=C.lineJoin='round';C.scale(SK,SK);
     if(g.t==='cactus'){ // 囊茎：三个鼓囊囊的肉球叠成一根茎，每个球一只眼，两条卷须手臂，头顶垂着一颗发光的诱饵
@@ -505,7 +564,9 @@ function drawWorld(){BO=(performance.now()/170|0)%3;C=ctx;const T=performance.no
   C.lineCap='round';
   for(const b of bodies())if(wrapped(b.g)){const a=b.g.vine.position,q=b.position;for(const [lw,c] of [[5,INK],[2.2,'#e04aa8']]){C.beginPath();C.moveTo(a.x,a.y);C.quadraticCurveTo((a.x+q.x)/2,Math.max(a.y,q.y)+30,q.x,q.y);C.strokeStyle=c;C.lineWidth=lw;C.stroke()}}
   for(const r of S.ropes){const a=r.c.pointA,q=r.cut?{x:a.x+3,y:a.y+16}:att(r);C.beginPath();C.moveTo(a.x,a.y);C.lineTo(q.x,q.y);C.strokeStyle=INK;C.lineWidth=4.4;C.stroke();C.strokeStyle='#d9b06a';C.lineWidth=1.8;C.stroke();wrect(a.x-9,a.y-5,18,8,83,.5);ink('#394353',1.8)}
+  if(S.boss)drawBoss(T);
   for(const b of bodies())if(b.g.kind!=='ground')drawBody(b);
+  if(S.boss)drawTent(T);
   const ang=p&&p.l>14?Math.atan2(-p.dy,-p.dx):(S.ang==null?-1.1:S.ang);S.ang=ang;const rec=p?p.l/PMAX*10:0;
   // —— 悬浮导弹车（未来风）：能量平台 + 悬浮底盘 + 电磁发射舱；蓄力越满，线圈和炮口越亮
   const CY='#4fe3ff',pul=.6+.4*Math.sin(T*5),chg=p?p.l/PMAX:0,kx=rec*.4;
@@ -548,7 +609,8 @@ function drawWorld(){BO=(performance.now()/170|0)%3;C=ctx;const T=performance.no
   // 弹药栏：瞄准时点一下换弹
   if(S.ammo.length){wrect(TX-27,G+9,(S.ammo.length-1)*tsp()+54,54,81);ink('#3a2a24',2.2);
     S.ammo.forEach((t,i)=>{const x=TX+i*tsp();if(i===S.sel&&S.state==='aim'){wrect(x-18,G+13,36,46,82,.6);ink('#f2d23a',2)}drawShot(t,x,TY+3,-1.571,AM[t].r*.95)})}
-  let tip='';if(S.state==='aim'&&S.ammo.length){const a=AM[S.ammo[S.sel]||S.ammo[0]];tip=S.lv===0&&S.ammo.length===LV[0].ammo.length?'按住屏幕向下拖，松手发射':a.tip}
+  if(S.boss){const f=S.boss.cores.reduce((a,c)=>a+(c.g.gone?0:Math.max(0,c.g.hp)),0)/(3*S.boss.hp);wrect(W/2-150,92,300,16,84,.6);ink('#2a1444',2.2);if(f>0){wrect(W/2-147,95,294*f,10,85,.4);C.fillStyle='#ff3b6a';C.fill()}label(BTIER[S.boss.tier].n,W/2,130,16,LITE,4)}
+  let tip='';if(S.state==='aim'&&S.ammo.length){const a=AM[S.ammo[S.sel]||S.ammo[0]];tip=S.lv===0&&S.ammo.length===LV[0].ammo.length?'按住屏幕向下拖，松手发射':S.boss&&S.boss.turn===0?'打爆三个发光的弱点囊！合上的打不动，别进触手的圈':a.tip}
   else if(S.state==='fly'&&S.cur&&!S.cur.g.gone&&!S.cur.g.used&&!S.cur.g.hit&&(S.cur.g.type==='chili'||S.cur.g.type==='guided'))tip=S.cur.g.type==='chili'?'现在点屏幕分裂！':'点一下你想打的位置！';
   if(tip&&!S.over){C.font='700 16px '+FONT;C.textAlign='center';const w=C.measureText(tip).width+30;wrect(W/2-w/2,50,w,32,5);ink(PAPER);C.fillStyle=INK;C.fillText(tip,W/2,72)}
   C.font='700 16px '+FONT;C.textAlign='left';C.fillStyle=LITE;C.fillText('植物 '+targets().length,14,G+34);C.fillText(S.rogue?'防线 '+RG.hp:'得分 '+S.score,14,G+58);
@@ -573,15 +635,15 @@ function label(txt,x,y,size,col,stroke){C.font='700 '+size+'px '+FONT;C.textAlig
 function btn(x,y,w,h,txt,fill,fn,col){BTN.push({x,y,w,h,fn});wrect(x+3,y+4,w,h,x+y);C.fillStyle=INK;C.fill();wrect(x,y,w,h,x+y);ink(fill);label(txt,x+w/2,y+h/2+6,17,col||INK)}
 function dim(a){C.fillStyle='rgba(24,8,10,'+a+')';C.fillRect(0,0,W,H)}
 function drawUI(){C=ctx;C.setTransform(SCL,0,0,SCL,0,0);BTN=[];
-  if(S&&UI.mode!=='menu'){btn(12,12,70,36,S.rogue?'退出':'关卡',PAPER,menu);if(S.rogue)label('第 '+RG.stage+' 波 · '+(RG.score+S.score)+' 分',W/2,38,21,LITE,5);else{btn(W-82,12,70,36,'重来',PAPER,()=>load(S.lv));label((S.lv+1)+' · '+LV[S.lv].name,W/2,38,21,LITE,5)}}
+  if(S&&UI.mode!=='menu'){btn(12,12,70,36,S.rogue?'退出':'关卡',PAPER,menu);if(S.rogue)label((S.boss?'Boss · ':'')+'第 '+RG.stage+' 波 · '+(RG.score+S.score)+' 分',W/2,38,21,LITE,5);else{btn(W-82,12,70,36,'重来',PAPER,()=>load(S.lv));label((S.lv+1)+' · '+LV[S.lv].name,W/2,38,21,LITE,5)}}
   if(UI.mode==='menu'){dim(.9);BTN=[];label('末日防线',W/2,118,44,'#e0602a',8);label('拖拽发射 · 点弹药栏换弹 · 消灭所有外星植物',W/2,156,15,LITE);
-    const open=save.stars.filter(s=>s>0).length,bw=118,bh=68,gap=8,x0=(W-bw*4-gap*3)/2,y0=178;
+    const open=save.stars.filter(s=>s>0).length,bw=118,bh=60,gap=7,x0=(W-bw*4-gap*3)/2,y0=176;
     LV.forEach((l,i)=>{const x=x0+(i%4)*(bw+gap),y=y0+(i>>2)*(bh+gap),lock=i>open,st=save.stars[i]||0;
-      wrect(x+3,y+4,bw,bh,i+40);C.fillStyle=INK;C.fill();wrect(x,y,bw,bh,i+40);ink(lock?'#3a2626':PAPER);
-      label(String(i+1),x+bw/2,y+24,20,lock?'#8a7070':INK);label(l.name,x+bw/2,y+42,12,lock?'#8a7070':INK);
-      label(lock?'未解锁':'★'.repeat(st)+'☆'.repeat(3-st),x+bw/2,y+60,13,lock?'#8a7070':'#b3261e');
+      wrect(x+3,y+4,bw,bh,i+40);C.fillStyle=INK;C.fill();wrect(x,y,bw,bh,i+40);ink(lock?(l.boss?'#5a2630':'#3a2626'):l.boss?'#f0a8b8':PAPER);
+      label(l.boss?'BOSS':String(i+1),x+bw/2,y+21,l.boss?16:18,lock?'#8a7070':l.boss?'#b3261e':INK);label(l.name,x+bw/2,y+37,12,lock?'#8a7070':INK);
+      label(lock?'未解锁':'★'.repeat(st)+'☆'.repeat(3-st),x+bw/2,y+53,12,lock?'#8a7070':'#b3261e');
       if(!lock)BTN.push({x,y,w:bw,h:bh,fn:()=>load(i)})});
-    btn(W/2-160,722,320,62,'肉鸽突袭 · 无尽尸潮','#c22a2a',rgStart,LITE);label('每波打完三选一强化，漏掉的植物会啃掉防线耐久',W/2,810,14,LITE);if(save.rg)label('最佳纪录：第 '+save.rg+' 波',W/2,832,15,'#f2d23a')}
+    btn(W/2-160,724,320,60,'肉鸽突袭 · 无尽尸潮','#c22a2a',rgStart,LITE);label('每波打完三选一强化，每 10 波一个 Boss',W/2,810,14,LITE);if(save.rg)label('最佳纪录：第 '+save.rg+' 波',W/2,832,15,'#f2d23a')}
   else if(UI.mode==='pick'){UI.t+=1/60;dim(Math.min(.86,UI.t*2.2));BTN=[];if(UI.t<.5)return;
     label(UI.left?'被突破 '+UI.left+' 株':'完美清场！耐久 +3',W/2,196,42,UI.left?'#e0602a':'#f2d23a',8);
     label('防线耐久 '+RG.hp+(UI.left?'（-'+UI.left+'）':'')+'    总分 '+RG.score,W/2,240,17,LITE);label('第 '+RG.stage+' 波结束 · 选一个强化',W/2,290,20,LITE,5);
