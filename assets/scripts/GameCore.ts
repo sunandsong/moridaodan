@@ -9,7 +9,7 @@ const {Engine,Bodies,Body,Composite,Events}=Matter;
 const W=540,H=960,G=880,OX=110,OY=782,PMAX=105,VK=.2,DT=1000/60,GR=.001*DT*DT,KD=8,THR=1.2;
 const cv=host.canvas,ctx=cv.getContext('2d'),SCL=host.scale||2;let UI={mode:'menu'};
 const MAT={bis:{hp:55,den:.001,c:'#d59a55',d:'#7a4a1e'},ice:{hp:22,den:.0008,c:'#f6d873',d:'#9a7a2a'},cho:{hp:150,den:.002,c:'#bcc2cc',d:'#5a606c'},tnt:{hp:10,den:.001,c:'#f04f4f',d:'#7a1414'}};
-const TG={pot:{hp:16,r:16,c:'#86a04e',d:'#5f8f3a'},cooker:{hp:42,r:20,c:'#5a2440',d:'#5f8f3a'}};
+const TG={pot:{hp:16,r:20,c:'#86a04e',d:'#5f8f3a'},cooker:{hp:42,r:25,c:'#5a2440',d:'#5f8f3a'}};
 const AM={sugar:{r:11,den:.004,name:'火箭弹',tip:'火箭弹：命中就爆炸'},chili:{r:10,den:.004,name:'集束导弹',tip:'集束导弹：飞行中再点一下屏幕，分裂成三枚'},melon:{r:15,den:.005,name:'巡航导弹',tip:'巡航导弹：命中后大范围爆炸，也可以点屏幕提前引爆'},guided:{r:10,den:.004,name:'制导导弹',tip:'制导导弹：飞行中点屏幕上任意位置，导弹会转向直飞过去'}};
 
 function kit(){const out=[];
