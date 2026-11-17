@@ -130,25 +130,60 @@ function cfill(col){const live=C===ctx;if(live){C.lineJoin='round';C.strokeStyle
 function ink(fill,lw=2.6){if(fill)cfill(fill);C.lineJoin=C.lineCap='round';C.strokeStyle=INK;C.lineWidth=lw;C.stroke();C.save();C.translate(BO*37,BO*23);C.strokeStyle=PG;C.globalAlpha=C===ctx?.3:.55;C.lineWidth=lw+.6;C.stroke();C.restore()}
 const bg=document.createElement('canvas');bg.width=W*2;bg.height=H*2;
 (()=>{C=bg.getContext('2d');C.scale(2,2);C.fillStyle=PAPER;C.fillRect(0,0,W,H);const q=jr(3),R=()=>q()+.5;
-  const st=[[0,[34,10,16]],[.42,[122,24,26]],[.8,[214,96,34]],[1,[240,170,60]]];
+  const st=[[0,[30,9,18]],[.4,[112,22,28]],[.74,[206,84,34]],[1,[246,178,70]]];
   const sky=y=>{const t=Math.max(0,Math.min(.999,y/G));let i=0;while(st[i+1][0]<t)i++;const a=st[i],b=st[i+1],k=(t-a[0])/(b[0]-a[0]);return a[1].map((v,j)=>v+(b[1][j]-v)*k|0)};
+  const mix=(c,k,a=1)=>`rgba(${c.map(v=>Math.min(255,v*k)|0)},${a})`;
+  const grad=(y0,y1,c0,c1)=>{const g=C.createLinearGradient(0,y0,0,y1);g.addColorStop(0,c0);g.addColorStop(1,c1);C.fillStyle=g;C.fillRect(0,y0,W,y1-y0)};
+  const SX=410,SY=166;
+  // —— 第 1 层：天空（渐变底 + 蜡笔笔触）
   for(let y=0;y<G;y+=6){C.fillStyle=`rgba(${sky(y)},.8)`;C.fillRect(0,y,W,6)}
   C.lineCap='round';for(let i=0;i<1500;i++){const x=R()*W,y=R()*G,a=-.45+q()*.5,l=30+R()*70;C.strokeStyle=`rgba(${sky(y+q()*70)},.55)`;C.lineWidth=3+R()*4;C.beginPath();C.moveTo(x,y);C.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l);C.stroke()}
+  // 太阳光晕 + 地平线辉光：让天空有明暗中心，而不是一块平涂
+  let rg=C.createRadialGradient(SX,SY,30,SX,SY,280);rg.addColorStop(0,'rgba(255,176,72,.6)');rg.addColorStop(.35,'rgba(236,96,40,.26)');rg.addColorStop(1,'rgba(236,96,40,0)');C.fillStyle=rg;C.fillRect(0,0,W,G);
+  grad(G-300,G,'rgba(255,205,100,0)','rgba(255,214,120,.5)');
+  // 云：先画被地平线照亮的下缘，再盖暗色云体；k 越小越暗（越近）
+  const cloud=(cx,cy,w,h,sd,k)=>{const r=jr(sd),L=[],n=5+(w/40|0);
+    for(let i=0;i<n;i++){const t=i/(n-1)-.5,m=1-4*t*t;L.push([cx+t*w+r()*10,cy+r()*h*.5-m*h*.3,h*(.45+m*.6)+r()*4,sd*13+i])}
+    C.save();C.translate(0,cy);C.scale(1,.5);C.translate(0,-cy);
+    for(const [x,y,rad,s] of L){wcirc(x,y+7,rad,s,1.5);C.fillStyle=mix(sky(cy+170),1.12);C.fill()}
+    for(const [x,y,rad,s] of L){wcirc(x,y,rad,s,1.5);C.fillStyle=mix(sky(cy),k);C.fill()}
+    C.restore();C.lineCap='round';
+    for(let i=0;i<n*2;i++){const x=cx+r()*w*.8,y=cy+r()*h*.3-h*.1,l=16+(r()+.5)*30;C.strokeStyle=mix(sky(cy),k*.72,.5);C.lineWidth=2.5;C.beginPath();C.moveTo(x-l/2,y);C.lineTo(x+l/2,y+r()*3);C.stroke()}};
+  cloud(120,430,150,30,21,.84);cloud(400,395,190,34,22,.82);cloud(250,335,120,26,23,.8);cloud(520,300,140,30,24,.78);cloud(40,290,130,30,25,.78);
+  // 太阳
   C.save();C.translate(W-930,70);
   for(let i=0;i<26;i++){const a=i*.2417+q()*.1,d=64+R()*22;wline(800+Math.cos(a)*46,96+Math.sin(a)*46,800+Math.cos(a)*d,96+Math.sin(a)*d,i+9);C.strokeStyle='rgba(240,150,50,.8)';C.lineWidth=3;C.stroke()}
   wcirc(800,96,42,5);ink('#120a0a',4);
   C.fillStyle='#ff3b2e';C.beginPath();C.moveTo(780,84);C.lineTo(794,93);C.lineTo(780,95);C.closePath();C.fill();C.beginPath();C.moveTo(820,84);C.lineTo(806,93);C.lineTo(820,95);C.closePath();C.fill();
   C.beginPath();C.moveTo(779,108);for(let i=1;i<=8;i++)C.lineTo(779+i*5.2,108+(i%2?8:1));C.strokeStyle='#ff3b2e';C.lineWidth=2.6;C.lineJoin='round';C.stroke();C.restore();
-  for(const sx of [120,430,640]){for(let i=0;i<9;i++){wcirc(sx+i*7+q()*10,G-90-i*22,12+i*2.2,sx+i);C.strokeStyle='rgba(23,17,15,.42)';C.lineWidth=5;C.stroke()}}
-  let x=-10;while(x<W+10){const w=26+R()*44,h=24+R()*70,n=3+(R()*3|0);C.beginPath();C.moveTo(x,G);C.lineTo(x+q()*4,G-h);for(let i=1;i<=n;i++)C.lineTo(x+w*i/n,G-h+(i%2?R()*22:-R()*8));C.lineTo(x+w,G);C.closePath();cfill('#4a1716');C.strokeStyle='rgba(23,17,15,.7)';C.lineWidth=2;C.stroke();
-    for(let k=0;k<3;k++)if(R()<.4)dot(x+6+R()*(w-12),G-8-R()*(h-24),1.8,'rgba(255,190,80,.9)');x+=w+R()*16}
+  // 近处的大块暗云，压在太阳和远云前面
+  cloud(300,226,180,40,31,.6);cloud(90,150,230,58,32,.5);cloud(500,52,210,52,33,.45);cloud(200,26,280,54,34,.42);
+  // —— 第 2~4 层：废墟剪影。越远越高、越淡、没有描边；层与层之间垫一层暖色雾气拉开距离
+  const ruins=(hmin,hmax,wmin,wmax,gap,col,near,win,mast)=>{let x=-10-R()*30;while(x<W+10){const w=wmin+R()*(wmax-wmin),h=hmin+R()*(hmax-hmin),n=3+(R()*3|0);
+    C.beginPath();C.moveTo(x,G);C.lineTo(x+q()*4,G-h);for(let i=1;i<=n;i++)C.lineTo(x+w*i/n,G-h+(i%2?R()*22:-R()*8));C.lineTo(x+w,G);C.closePath();
+    if(near){cfill(col);C.strokeStyle='rgba(23,17,15,.7)';C.lineWidth=2;C.stroke()}else{C.fillStyle=col;C.fill()}
+    if(mast&&R()<mast){const mx=x+w*(.2+R()*.6),mh=18+R()*34;C.strokeStyle=col;C.lineWidth=2;C.beginPath();C.moveTo(mx,G-h+10);C.lineTo(mx+q()*8,G-h-mh);C.moveTo(mx-6,G-h-mh*.6);C.lineTo(mx+7,G-h-mh*.55);C.stroke()}
+    for(let k=0;k<4;k++)if(R()<win[0])dot(x+6+R()*(w-12),G-8-R()*(h-24),win[1],win[2]);x+=w+R()*gap}};
+  ruins(150,300,30,58,46,'#a4452c',0,[0,0,''],.5);
+  grad(G-330,G,'rgba(246,168,76,0)','rgba(246,172,82,.62)');
+  ruins(80,185,28,56,26,'#74271f',0,[.3,1.3,'rgba(255,176,84,.55)'],.25);
+  grad(G-210,G,'rgba(240,140,60,0)','rgba(240,146,64,.5)');
+  for(const [sx,d] of [[150,1],[395,1.25]]){for(let i=0;i<10;i++){const cx=sx+i*8*d+q()*10,cy=G-70-i*24*d,r=(11+i*2.6)*d;wcirc(cx,cy,r,sx+i);C.fillStyle='rgba(30,14,14,.14)';C.fill();C.strokeStyle='rgba(23,17,15,.36)';C.lineWidth=5;C.stroke()}}
+  ruins(24,94,26,70,16,'#431515',1,[.4,1.8,'rgba(255,190,80,.9)'],0);
+  grad(G-46,G,'rgba(255,170,80,0)','rgba(255,176,90,.3)');
   for(const [tx,k] of [[30,1],[W-28,-1]]){C.strokeStyle=INK;C.lineWidth=7;wline(tx,G,tx+k*6,G-95,tx);C.stroke();C.lineWidth=4;wline(tx+k*4,G-60,tx+k*34,G-100,tx+1);C.stroke();wline(tx+k*5,G-80,tx-k*22,G-118,tx+2);C.stroke();C.lineWidth=2.5;wline(tx+k*22,G-85,tx+k*30,G-125,tx+3);C.stroke();wline(tx-k*12,G-100,tx-k*28,G-104,tx+4);C.stroke()}
   C.fillStyle=PG;C.fillRect(0,0,W,G);
-  C.fillStyle='#241b17';C.fillRect(0,G,W,H-G);for(let i=0;i<260;i++){const gx=R()*W,gy=G+R()*(H-G),l=20+R()*50;C.strokeStyle=R()<.5?'rgba(70,45,32,.6)':'rgba(15,10,10,.6)';C.lineWidth=3+R()*3;C.beginPath();C.moveTo(gx,gy);C.lineTo(gx+l,gy+q()*6);C.stroke()}
+  // —— 地面：上亮下暗，被地平线的火光扫到一条边
+  grad(G,H,'#40291f','#150e0d');for(let i=0;i<260;i++){const gx=R()*W,gy=G+R()*(H-G),l=20+R()*50;C.strokeStyle=R()<.5?'rgba(84,52,36,.55)':'rgba(12,8,8,.6)';C.lineWidth=3+R()*3;C.beginPath();C.moveTo(gx,gy);C.lineTo(gx+l,gy+q()*6);C.stroke()}
+  for(let i=0;i<60;i++){const gx=R()*W,gy=G+4+R()*R()*16,l=14+R()*36;C.strokeStyle=`rgba(226,128,62,${.2+R()*.3})`;C.lineWidth=1.5+R()*2;C.beginPath();C.moveTo(gx,gy);C.lineTo(gx+l,gy+q()*2);C.stroke()}
+  for(let i=0;i<34;i++){const t=R(),gx=R()*W,gy=G+12+t*(H-G-48),r=1.6+t*4.2;wcirc(gx,gy+r*.5,r,i+300,.5);C.fillStyle='rgba(0,0,0,.45)';C.fill();wcirc(gx,gy,r,i+300,.5);C.fillStyle=R()<.5?'#5a4032':'#3a2a24';C.fill();C.strokeStyle=INK;C.lineWidth=1.1;C.stroke()}
   C.fillStyle=PG;C.fillRect(0,G,W,H-G);
   C.beginPath();C.moveTo(-5,G);for(let gx=20;gx<=W+20;gx+=40)C.quadraticCurveTo(gx-20,G+q()*3,gx,G+q()*2);C.strokeStyle=INK;C.lineWidth=3.5;C.stroke();
   for(let gx=50;gx<W;gx+=120){const cx=gx+q()*50;C.beginPath();C.moveTo(cx,G+2);C.lineTo(cx+6,G+16);C.lineTo(cx-4,G+28);C.lineTo(cx+8,G+44);C.moveTo(cx+6,G+16);C.lineTo(cx+20,G+22);C.strokeStyle='rgba(0,0,0,.8)';C.lineWidth=2;C.stroke()}
   for(const sx of [330,480]){C.fillStyle=PAPER;C.fillRect(sx-4,G+44,8,6);C.strokeStyle=INK;C.lineWidth=1.2;C.strokeRect(sx-4,G+44,8,6);wcirc(sx,G+38,8,sx,.5);ink(PAPER,2);dot(sx-3,G+38,1.9,INK);dot(sx+3,G+38,1.9,INK)}
+  // —— 整体质感：纸面颗粒 + 四角压暗
+  for(let i=0;i<9000;i++){C.fillStyle=R()<.55?`rgba(20,10,10,${.05+R()*.13})`:`rgba(240,226,200,${.04+R()*.1})`;C.fillRect(R()*W,R()*H,.5+R()*.9,.5+R()*.9)}
+  rg=C.createRadialGradient(W/2,G*.56,250,W/2,G*.56,650);rg.addColorStop(0,'rgba(18,4,8,0)');rg.addColorStop(1,'rgba(18,4,8,.55)');C.fillStyle=rg;C.fillRect(0,0,W,H);
   C=ctx})();
 const SC={sugar:['#fbf6ea','#ef4b4b',11],chili:['#fbf6ea','#f5b82e',23],mini:['#fbf6ea','#f5b82e',37],melon:['#a8cc6a','#ef4b4b',41],guided:['#fbf6ea','#4a8ee0',53]};
 function drawShot(type,x,y,an,r,fl){const [c0,c1,sd]=SC[type],L=r*1.5,w=r*.66;C.save();C.translate(x,y);C.rotate(an);
