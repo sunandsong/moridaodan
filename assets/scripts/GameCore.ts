@@ -9,7 +9,7 @@ const {Engine,Bodies,Body,Composite,Events}=Matter;
 const W=540,H=960,G=880,OX=110,OY=782,PMAX=105,VK=.2,DT=1000/60,GR=.001*DT*DT,KD=8,THR=1.2;
 const cv=host.canvas,ctx=cv.getContext('2d'),SCL=host.scale||2;let UI={mode:'menu'};
 const MAT={bis:{hp:55,den:.001,c:'#d59a55',d:'#7a4a1e'},ice:{hp:22,den:.0008,c:'#f6d873',d:'#9a7a2a'},cho:{hp:150,den:.002,c:'#bcc2cc',d:'#5a606c'},tnt:{hp:10,den:.001,c:'#f04f4f',d:'#7a1414'}};
-const TG={pot:{hp:16,r:16,c:'#a8dc6c',d:'#3a4f26'},cooker:{hp:42,r:20,c:'#c59bee',d:'#2f3d52'}};
+const TG={pot:{hp:16,r:16,c:'#86a04e',d:'#5f8f3a'},cooker:{hp:42,r:20,c:'#5a2440',d:'#5f8f3a'}};
 const AM={sugar:{r:11,den:.004,name:'火箭弹',tip:'火箭弹：命中就爆炸'},chili:{r:10,den:.004,name:'集束导弹',tip:'集束导弹：飞行中再点一下屏幕，分裂成三枚'},melon:{r:15,den:.005,name:'巡航导弹',tip:'巡航导弹：命中后大范围爆炸，也可以点屏幕提前引爆'},guided:{r:10,den:.004,name:'制导导弹',tip:'制导导弹：飞行中点屏幕上任意位置，导弹会转向直飞过去'}};
 
 function kit(){const out=[];
@@ -203,15 +203,37 @@ function drawBody(b){const g=b.g,p=b.position;C.save();C.translate(p.x,p.y);C.ro
     wrect(-w/2,-h/2,w,h,sd);ink(null);
     if(g.hp<g.max*.6){const k=(sd*37%10)/10-.5;C.beginPath();if(hz){C.moveTo(k*w*.5,-h/2);C.lineTo(k*w*.5+4,0);C.lineTo(k*w*.5-3,h/2)}else{C.moveTo(-w/2,k*h*.5);C.lineTo(0,k*h*.5+4);C.lineTo(w/2,k*h*.5-3)}C.strokeStyle=INK;C.lineWidth=1.8;C.stroke()}
     if(g.flash>0){C.globalAlpha=Math.min(1,g.flash*3);wrect(-w/2,-h/2,w,h,sd);C.fillStyle='#fff';C.fill();C.globalAlpha=1}}
-  else if(g.kind==='target'){const t=TG[g.t],r=g.r,hurtF=g.hp<g.max*.55,big=g.t==='cooker',sd=r*7+3;
-    if(big)for(const k of [-1,1]){blob([[k*r*.35,-r*.8],[k*r*1.05,-r*1.55],[k*r*.9,-r*.55]]);ink(PAPER,2)}
+  else if(g.kind==='target'){const t=TG[g.t],r=g.r,hurtF=g.hp<g.max*.55,big=g.t==='cooker',sd=r*7+3,tt=performance.now()/1000+p.x*.013,tw=BO-1;
+    // 带刺的藤蔓：从下半身伸出来，一直在扭，末端一片叶子
+    C.lineCap='round';for(let i=0,n=big?7:5;i<n;i++){const a=.35+i*(2.45/(n-1)),w=Math.sin(tt*(big?3:4.5)+i*1.7)*.38,l=r*(big?1.65:1.5);
+      C.beginPath();C.moveTo(Math.cos(a)*r*.8,Math.sin(a)*r*.8);C.quadraticCurveTo(Math.cos(a+w*.5)*r*1.25,Math.sin(a+w*.5)*r*1.25,Math.cos(a+w)*l,Math.sin(a+w)*l);C.strokeStyle=INK;C.lineWidth=big?4.4:3.4;C.stroke();C.strokeStyle=t.d;C.lineWidth=big?1.8:1.2;C.stroke();
+      const mx=Math.cos(a+w*.5)*r*1.12,my2=Math.sin(a+w*.5)*r*1.12,tx=Math.cos(a+w)*l,ty=Math.sin(a+w)*l;C.beginPath();C.moveTo(mx,my2);C.lineTo(mx+Math.cos(a+1.3)*4.5,my2+Math.sin(a+1.3)*4.5);C.strokeStyle=INK;C.lineWidth=1.6;C.stroke();
+      C.beginPath();C.ellipse(tx,ty,big?5.5:4.5,big?2.6:2.2,a+w+.5,0,7);C.fillStyle=t.d;C.fill();C.strokeStyle=INK;C.lineWidth=1.2;C.stroke()}
+    // 大的是一圈血红花瓣的魔眼花，小的是顶着尖萼片的食人花苞
+    if(big)for(let i=0;i<10;i++){const a=i*.6283+.2+Math.sin(tt*1.5+i)*.04,pc=(da,d)=>[Math.cos(a+da)*r*d,Math.sin(a+da)*r*d];blob([pc(-.3,.8),pc(-.16,1.3),pc(0,1.72),pc(.16,1.3),pc(.3,.8)]);ink(i%2?'#a3242e':'#7c1a26',1.8)}
+    else for(let i=0;i<5;i++){const a=-2.62+i*.52,pc=(da,d)=>[Math.cos(a+da)*r*d,Math.sin(a+da)*r*d];blob([pc(-.24,.8),pc(-.1,1.2),pc(0,1.5),pc(.1,1.2),pc(.24,.8)]);ink('#3f6a2a',1.6)}
     wcirc(0,0,r,sd,1.3);ink(t.c);
-    dot(-r*.6,r*.36,r*.16,'rgba(240,90,110,.45)');dot(r*.62,r*.36,r*.16,'rgba(240,90,110,.45)');
-    C.strokeStyle=INK;C.lineWidth=1.6;C.beginPath();C.moveTo(-r*.6,-r*.62);C.lineTo(r*.05,-r*.5);for(let i=0;i<3;i++){const sx=-r*.5+i*r*.22,sy=-r*.6+i*r*.04;C.moveTo(sx,sy-3);C.lineTo(sx+1,sy+3)}C.stroke();
-    if(hurtF){for(const k of [-1,1]){const ex=k*r*.38,ey=-r*.02;C.beginPath();C.moveTo(ex-3.5,ey-3.5);C.lineTo(ex+3.5,ey+3.5);C.moveTo(ex+3.5,ey-3.5);C.lineTo(ex-3.5,ey+3.5);C.strokeStyle=INK;C.lineWidth=2.4;C.stroke()}}
-    else if(big){dot(0,-r*.08,r*.38,'#f2d23a');C.beginPath();C.arc(0,-r*.08,r*.38,0,7);C.strokeStyle=INK;C.lineWidth=1.8;C.stroke();C.beginPath();C.ellipse(0,-r*.08,r*.08,r*.28,0,0,7);C.fillStyle=INK;C.fill()}
-    else{dot(-r*.36,-r*.05,r*.27,'#f4efe4');dot(r*.4,0,r*.17,'#f4efe4');C.strokeStyle=INK;C.lineWidth=1.5;C.beginPath();C.arc(-r*.36,-r*.05,r*.27,0,7);C.stroke();C.beginPath();C.arc(r*.4,0,r*.17,0,7);C.stroke();dot(-r*.32,-r*.02,r*.09,'#b3261e');dot(r*.42,r*.02,r*.07,'#b3261e')}
-    C.beginPath();C.moveTo(-r*.55,r*.46);for(let i=1;i<=6;i++)C.lineTo(-r*.55+i*r*.183,r*.46+(i%2?r*.22:0));C.strokeStyle=INK;C.lineWidth=2;C.lineJoin='round';C.stroke();
+    dot(-r*.6,r*.5,r*.2,'rgba(40,16,28,.3)');dot(r*.62,-r*.52,r*.17,'rgba(40,16,28,.3)');dot(r*.05,-r*.76,r*.12,'rgba(40,16,28,.25)');
+    if(big){const ey=-r*.2,er=r*.46,nv=hurtF?11:6,ix=tw*1.3;
+      wcirc(0,ey,er,sd+1,.6);ink(hurtF?'#e6a898':'#e8dfc0',1.8);
+      C.strokeStyle='#b3261e';C.lineWidth=1;for(let i=0;i<nv;i++){const a=i*6.283/nv+.3;C.beginPath();C.moveTo(Math.cos(a)*er*.95,ey+Math.sin(a)*er*.95);C.lineTo(Math.cos(a+.3)*er*.5,ey+Math.sin(a+.3)*er*.5);C.stroke()}
+      dot(ix,ey+1,er*.62,'#b3261e');dot(ix,ey+1,er*.44,'#f2a01e');C.beginPath();C.ellipse(ix,ey+1,er*.12,er*.5,0,0,7);C.fillStyle='#0d0507';C.fill();dot(ix-er*.25,ey-er*.12,er*.1,'#fff');
+      C.beginPath();C.arc(0,ey,er*1.05,Math.PI*(hurtF?1.0:1.12),Math.PI*(hurtF?2.0:1.88));C.closePath();C.fillStyle='#34142a';C.fill();C.strokeStyle=INK;C.lineWidth=1.8;C.stroke();
+      if(hurtF){C.strokeStyle='#b3261e';C.lineWidth=2.2;C.beginPath();C.moveTo(-er*.3,ey+er*.9);C.lineTo(-er*.35,ey+er*1.9);C.moveTo(er*.4,ey+er*.85);C.lineTo(er*.42,ey+er*1.5);C.stroke()}
+      for(const k of [-1,1]){dot(k*r*.74,r*.1,r*.11,INK);dot(k*r*.74,r*.1,r*.06,'#ff3b2e')}}
+    else{for(const [ex,ey,er] of [[-r*.36,-r*.24,r*.3],[r*.42,-r*.2,r*.2]]){dot(ex,ey,er,'#0d0507');C.beginPath();C.arc(ex,ey,er,0,7);C.strokeStyle=INK;C.lineWidth=1.5;C.stroke();
+        if(hurtF&&ex<0){C.strokeStyle='#b3261e';C.lineWidth=2.2;C.beginPath();C.moveTo(ex,ey);C.lineTo(ex-1,ey+r*.75);C.stroke()}
+        else{dot(ex+tw*.7,ey,er*.78,'rgba(255,50,30,.32)');dot(ex+tw*.7,ey,er*.38,'#ff3b2e');dot(ex+tw*.7,ey,er*.14,'#ffe9c0')}}
+      C.strokeStyle=INK;C.lineWidth=2;C.beginPath();C.moveTo(-r*.8,-r*.66);C.lineTo(-r*.08,-r*.42);C.moveTo(r*.72,-r*.52);C.lineTo(r*.16,-r*.38);C.stroke();
+      C.strokeStyle='rgba(40,70,25,.7)';C.lineWidth=1.2;C.beginPath();C.moveTo(0,-r*.95);C.lineTo(r*.04,-r*.5);C.moveTo(-r*.5,-r*.78);C.lineTo(-r*.2,-r*.55);C.moveTo(r*.55,-r*.74);C.lineTo(r*.26,-r*.52);C.stroke()}
+    // 裂到耳根的嘴 + 尖牙 + 滴血
+    {const my=big?r*.4:r*.2,mw=big?r*.64:r*.74,s0=big?r*.1:r*.18,s1=big?r*.52:r*.74,mp=(u,s)=>[mw*(2*u-1),my+s*4*u*(1-u)];
+      C.beginPath();C.moveTo(-mw,my);C.quadraticCurveTo(0,my+s1*2,mw,my);C.quadraticCurveTo(0,my+s0*2,-mw,my);C.closePath();C.fillStyle='#16040a';C.fill();C.lineJoin='round';C.strokeStyle=INK;C.lineWidth=4.6;C.stroke();C.strokeStyle=big?'#c22a3a':'#a3242e';C.lineWidth=2.2;C.stroke();
+      C.fillStyle=LITE;C.strokeStyle=INK;C.lineWidth=.9;
+      for(let i=0;i<6;i++){const u=.12+i*.152,a=mp(u-.06,s0),b=mp(u+.06,s0),len=r*(i%2?.2:.31);C.beginPath();C.moveTo(a[0],a[1]);C.lineTo((a[0]+b[0])/2,(a[1]+b[1])/2+len);C.lineTo(b[0],b[1]);C.closePath();C.fill();C.stroke()}
+      for(let i=0;i<4;i++){const u=.26+i*.16,a=mp(u-.05,s1),b=mp(u+.05,s1);C.beginPath();C.moveTo(a[0],a[1]);C.lineTo((a[0]+b[0])/2,(a[1]+b[1])/2-r*.2);C.lineTo(b[0],b[1]);C.closePath();C.fill();C.stroke()}
+      const dx=mw*.5,dy=my+s1*.72,dl=r*(.34+.14*Math.sin(tt*2));C.strokeStyle='#b3261e';C.lineWidth=2;C.lineCap='round';C.beginPath();C.moveTo(dx,dy);C.lineTo(dx,dy+dl);C.stroke();dot(dx,dy+dl,1.7,'#b3261e')}
+    if(hurtF){C.beginPath();C.moveTo(r*.2,-r);C.lineTo(r*.02,-r*.6);C.lineTo(r*.3,-r*.45);C.lineTo(r*.12,-r*.1);C.strokeStyle=INK;C.lineWidth=1.8;C.lineJoin='round';C.stroke()}
     if(g.flash>0){C.globalAlpha=Math.min(1,g.flash*3);wcirc(0,0,r,sd);C.fillStyle='#fff';C.fill();C.globalAlpha=1}}
   else if(g.kind==='shelf'){C.strokeStyle=INK;C.lineWidth=3;wline(-g.w/2+14,g.h/2,-g.w/2+16,g.h/2+26,90);C.stroke();wline(-g.w/2+16,g.h/2+26,-g.w/2+42,g.h/2,91);C.stroke();wline(g.w/2-14,g.h/2,g.w/2-16,g.h/2+26,92);C.stroke();wline(g.w/2-16,g.h/2+26,g.w/2-42,g.h/2,93);C.stroke();wrect(-g.w/2,-g.h/2,g.w,g.h,94);ink('#d59a55')}
   C.restore();if(g.kind==='shot')g.hit?drawShot(g.type,p.x,p.y,b.angle,g.r):drawShot(g.type,p.x,p.y,Math.atan2(b.velocity.y,b.velocity.x),g.r,1)}
@@ -226,12 +248,31 @@ function drawWorld(){BO=(performance.now()/170|0)%3;C=ctx;const T=performance.no
   const p=pull(),sx=OX,sy=OY;
   for(const b of bodies())if(b.g.kind!=='ground')drawBody(b);
   const ang=p&&p.l>14?Math.atan2(-p.dy,-p.dx):(S.ang==null?-1.1:S.ang);S.ang=ang;const rec=p?p.l/PMAX*10:0;
-  wrect(OX-54,OY+31,108,G-OY-29,61);ink('#a9aeb8');
-  for(let i=0;i<6;i++){wline(OX-44+i*17,OY+45,OX-36+i*17,OY+36,62+i);C.strokeStyle='#d9a520';C.lineWidth=4;C.lineCap='round';C.stroke()}
-  wrect(OX-44,OY+8,82,15,63);ink('#8fb45a');
-  wrect(OX-52,OY-9,24,30,64);ink('#a6c96e');wrect(OX-48,OY-5,13,10,65,.6);ink('#bfe9f7',1.8);
-  for(const x of [OX-34,OX-6,OX+24]){wcirc(x,OY+24,7.5,66+x,.6);ink('#17110f');dot(x,OY+24,2.5,PAPER)}
-  C.save();C.translate(OX+4,OY+2);C.rotate(ang);wrect(-20-rec*.4,-11,56,22,70);ink('#7a9e48');for(const yy of [-5,5])dot(30-rec*.4,yy,3.4,INK);C.restore();
+  // —— 悬浮导弹车（未来风）：能量平台 + 悬浮底盘 + 电磁发射舱；蓄力越满，线圈和炮口越亮
+  const CY='#4fe3ff',pul=.6+.4*Math.sin(T*5),chg=p?p.l/PMAX:0,kx=rec*.4;
+  const poly=(P,sd,j=.8)=>{const r=jr(sd);C.beginPath();P.forEach((v,i)=>C[i?'lineTo':'moveTo'](v[0]+r()*j*2,v[1]+r()*j*2));C.closePath()};
+  const glow=(x,y,rx,ry,a)=>{C.beginPath();C.ellipse(x,y,rx,ry,0,0,7);C.fillStyle=`rgba(79,227,255,${a})`;C.fill()};
+  poly([[OX-58,G+2],[OX-50,OY+34],[OX+50,OY+34],[OX+58,G+2]],61);ink('#4a5364');
+  poly([[OX-47,OY+38],[OX+47,OY+38],[OX+50,OY+47],[OX-50,OY+47]],62,.5);ink('#7f8a9c',1.6);
+  for(let i=0;i<5;i++){const on=(((T*4|0)-i)%5+5)%5===0;wline(OX-42+i*18,OY+62,OX-30+i*18,OY+62,63+i,.6);C.lineCap='round';C.lineWidth=4;C.strokeStyle=INK;C.stroke();C.lineWidth=2.2;C.strokeStyle=on?'#d8fbff':'rgba(79,227,255,.55)';C.stroke()}
+  for(const x of [OX-46,OX+46])dot(x,OY+78,2,'#232a36');
+  glow(OX,OY+33,48,5,.18+pul*.1);
+  for(const x of [OX-30,OX+24]){glow(x,OY+30,13+pul*3,5,.4);glow(x,OY+29,7+pul*2,2.6,.9);C.beginPath();C.ellipse(x,OY+28.5,4,1.4,0,0,7);C.fillStyle='#fff';C.fill();
+    poly([[x-13,OY+19],[x+13,OY+19],[x+9,OY+27],[x-9,OY+27]],66+x,.5);ink('#394353',2)}
+  poly([[OX-54,OY+18],[OX-45,OY+6],[OX+30,OY+6],[OX+52,OY+15],[OX+45,OY+22],[OX-48,OY+22]],64);ink('#e6ebf1');
+  wline(OX-40,OY+15,OX+40,OY+15,65,.5);C.lineCap='round';C.strokeStyle=CY;C.lineWidth=2.6;C.stroke();
+  poly([[OX+30,OY+6],[OX+52,OY+15],[OX+45,OY+22],[OX+36,OY+22]],69,.4);ink('#f08a2a',1.8);
+  wline(OX-45,OY-5,OX-51,OY-27,73,.6);C.strokeStyle=INK;C.lineWidth=2.2;C.stroke();dot(OX-51,OY-28,3,INK);dot(OX-51,OY-28,1.9,T%1<.5?'#ff3b2e':'#6a1614');
+  poly([[OX-48,OY+7],[OX-41,OY-9],[OX-24,OY-11],[OX-13,OY+7]],67);ink('#2a3648');
+  poly([[OX-41,OY+3],[OX-37,OY-5],[OX-26,OY-7],[OX-20,OY+3]],68,.4);ink('#8ff1ff',1.5);C.strokeStyle='#fff';C.lineWidth=1.6;C.beginPath();C.moveTo(OX-36,OY);C.lineTo(OX-33,OY-4);C.stroke();
+  wcirc(OX+4,OY+4,9,71,.5);ink('#7f8a9c',2);
+  C.save();C.translate(OX+4,OY+2);C.rotate(ang);
+  if(chg>.13)glow(40-kx,0,7+chg*11,7+chg*11,.12+chg*.28);
+  poly([[-23-kx,-10],[25-kx,-12],[37-kx,-7],[37-kx,7],[25-kx,12],[-23-kx,10]],70);ink('#394353');
+  for(let i=0;i<3;i++){const x=-13+i*12-kx,a=Math.min(1,.35+chg*.9+(chg>.13?0:pul*.15));C.beginPath();C.moveTo(x,-9);C.lineTo(x,9);C.lineCap='butt';C.lineWidth=4.2;C.strokeStyle=`rgba(79,227,255,${a})`;C.stroke();if(chg>.5){C.lineWidth=1.4;C.strokeStyle='#fff';C.stroke()}}
+  poly([[-20-kx,-15],[14-kx,-16],[18-kx,-11],[-20-kx,-10]],72,.4);ink('#e6ebf1',1.6);
+  for(const yy of [-4.5,4.5]){dot(35-kx,yy,3.3,INK);dot(35-kx,yy,1.5+chg*1.3,chg>.13?'#d8fbff':CY)}
+  C.restore();dot(OX+4,OY+2,3,INK);dot(OX+4,OY+2,1.5,CY);
   if(p&&p.l>14){let x=sx,y=sy,vx=-p.dx*VK,vy=-p.dy*VK;for(let i=1;i<=42;i++){vy+=GR;x+=vx;y+=vy;if(y>G)break;if(i%3===0){dot(x,y,3.6-i*.04,INK);dot(x,y,2.4-i*.03,LITE)}}}
   for(let i=0;i<S.ammo.length;i++){const t=S.ammo[i],r=AM[t].r*.8;drawShot(t,OX+78+i*21,G-r*1.5-3,-1.571,r)}
   for(let i=S.fx.length-1;i>=0;i--){const f=S.fx[i];f.life-=1/60;if(f.life<=0){S.fx.splice(i,1);continue}
