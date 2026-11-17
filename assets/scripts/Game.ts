@@ -1,6 +1,6 @@
 import {
     _decorator, Component, Node, director, Director, Sprite, SpriteFrame, Texture2D,
-    ImageAsset, UITransform, input, Input, EventTouch, sys, view,
+    ImageAsset, UITransform, input, Input, EventTouch, sys, view, resources,
 } from 'cc';
 import { EDITOR } from 'cc/env';
 import { createGame } from './GameCore';
@@ -38,6 +38,8 @@ export class Game extends Component {
             },
         });
         this.game.draw();
+        // 首页背景图：assets/resources/title-screen-background.png
+        resources.load('title-screen-background', ImageAsset, (err, img) => { if (!err) this.game.setHomeBg(img.data); });
 
         const tex = new Texture2D();
         tex.image = new ImageAsset(cv);
